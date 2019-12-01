@@ -58,7 +58,9 @@ int CopyValue_t(value_t dest, value_t source) {
 	assert(dest != NULL);
 	assert(source != NULL);
 
-	strcpy(dest, source);
+	for (int i = 0; i < treeStrMaxSize; i++) {
+		dest[i] = source[i];
+	}
 
 	return 0;
 }
@@ -183,6 +185,7 @@ int TreeOk(tree_t* tree) {
 	int actSize = 0;
 	if (NodesOk(tree->root, &actSize) != 0) {
 		tree->err = 3;
+		return 0;
 	}
 	if (actSize != tree->size) {
 		tree->err = 4;
@@ -611,7 +614,11 @@ int RecalcTreeSize(tree_t* tree) {
 	assert(tree != NULL);
 	assert(tree->root != NULL);
 
-	return CalcNodesCount(tree->root, &tree->size);
+	int newSize = 0;
+	CalcNodesCount(tree->root, &newSize);
+	tree->size = newSize;
+
+	return newSize;
 }
 
 
@@ -708,12 +715,13 @@ node_t* CreateNode() {
 
 
 /*  Ќе дл€ пользовател€
-*	—оздает новый узел с заполненными пол€ми
+*	—оздает новый узел с заполненными пол€ми, если left или right != NULL,\
+ то мен€ет их пол€ parent на соответствующие
 *
 *	@return ”казатель на новый узел. Ќе забудьте освободить пам€ть по этому указателю!
 */
 
-node_t* CreateNodeProp(node_t* parent, value_t value, node_type type, node_t* left, node_t* right) {
+node_t* CreateNodeProp(node_t* parent, node_type type, value_t value, node_t* left, node_t* right) {
 	node_t* node = CreateNode();
 
 	node->parent = parent;
@@ -721,6 +729,13 @@ node_t* CreateNodeProp(node_t* parent, value_t value, node_type type, node_t* le
 	node->type = type;
 	node->left = left;
 	node->right = right;
+
+	if (left != NULL) {
+		left->parent = node;
+	}
+	if (right != NULL) {
+		right->parent = node;
+	}
 
 	return node;
 }
@@ -737,7 +752,13 @@ node_t* CreateNodeProp(node_t* parent, value_t value, node_type type, node_t* le
 node_t* CloneNode(node_t* srcNode) {
 	assert(srcNode != NULL);
 
-	node_t* dstNode = CreateNodeProp(srcNode->parent, srcNode->value, srcNode->type, srcNode->left, srcNode->right);
+	node_t* dstNode = CreateNodeProp(srcNode->parent, srcNode->type, srcNode->value, srcNode->left, srcNode->right);
+	if (srcNode->left != NULL) {
+		srcNode->left->parent = srcNode;
+	}
+	if (srcNode->right != NULL) {
+		srcNode->right->parent = srcNode;
+	}
 
 	return dstNode;
 }

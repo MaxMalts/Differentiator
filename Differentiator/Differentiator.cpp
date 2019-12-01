@@ -461,79 +461,97 @@ tree_t ExprToTree(char* expr, int* syntaxErr = NULL) {
 }
 
 
-tree_t ExprToDiffTree(char* expr, int* syntaxErr = NULL) {
-	assert(expr != NULL);
+void DifferentiateNode(node_t* curNode) {
+	assert(curNode != NULL);
 
-	int syntErr = 0;
-	tree_t tree = ExprToTree(expr, &syntErr);
-	if (syntaxErr != NULL) {
-		*syntaxErr = syntErr;
+	switch (curNode->type) {
+	case num_node: {
+		float newNum = 0;
+		memcpy(curNode->value, &newNum, sizeof(float));
+		break;
 	}
-	if (syntErr) {
-		return {};
+	case var_node: {
+		curNode->type = num_node;
+		float newNum = 1;
+		memcpy(curNode->value, &newNum, sizeof(float));
+		break;
 	}
-	
-	node_t* oldRoot = tree.root;
-	tree.root = CreateNode();
-	tree.root->type = diff_node;
-	tree.root->right = oldRoot;
-	oldRoot->parent = tree.root;
-	tree.size++;
+	case op_node:
+		switch (curNode->value[0]) {
+		case '+':
+		case '-':
+			DifferentiateNode(curNode->left);
+			DifferentiateNode(curNode->right);
+			break;
+		case '*': {
+			curNode->value[0] = '+';
 
-#ifdef _DEBUG
-	if (TreeOk(&tree)) {
-		PrintTree_OK(tree);
-	}
-	else {
-		PrintTree_NOK(tree);
-	}
-#endif
+			node_t* leftOld = curNode->left;
+			node_t* rightOld = curNode->right;
 
-	return tree;
+			node_t* leftNew = CreateNodeProp(curNode, op_node, (char*)"*", leftOld, rightOld);
+			node_t* rightNew = CreateNodeProp(curNode, op_node, (char*)"*", CloneNodes(leftOld), CloneNodes(rightOld));
+
+			curNode->left = leftNew;
+			curNode->right = rightNew;
+
+			DifferentiateNode(leftNew->left);
+			DifferentiateNode(rightNew->right);
+			break;
+		}
+		case '/': {
+			curNode->value[0] = '/';
+
+			node_t* leftOld = curNode->left;
+			node_t* rightOld = curNode->right;
+
+			node_t* minusLeft = CreateNodeProp(NULL, op_node, (char*)"*", leftOld, rightOld);
+			node_t* minusRight = CreateNodeProp(NULL, op_node, (char*)"*", CloneNodes(leftOld), CloneNodes(rightOld));
+
+			node_t* leftNew = CreateNodeProp(curNode, op_node, (char*)"-", minusLeft, minusRight);
+
+			node_t* rightNew = CreateNodeProp(curNode, op_node, (char*)"*", CloneNodes(rightOld), CloneNodes(rightOld));
+
+			curNode->left = leftNew;
+			curNode->right = rightNew;
+
+			DifferentiateNode(minusLeft->left);
+			DifferentiateNode(minusRight->right);
+			break;
+		}
+		}
+	}
 }
 
-//int DifferentiateNode(node_t* curNode) {
-//	assert(curNode != NULL);
-//
-//	switch (curNode->type) {
-//	case num_node:
-//		float zeroF = 0;
-//		memcpy(curNode->value, &zeroF, sizeof(float));
-//		break;
-//	case var_node:
-//		break;
-//	case op_node:
-//		switch (curNode->value[0]) {
-//		case '+':
-//		case '-':
-//			DifferentiateNode(curNode->left);
-//			DifferentiateNode(curNode->right);
-//			break;
-//		case '*':
-//			node_t* leftNodeOld = curNode->left;
-//			node_t* rightNodeOld = curNode->right;
-//
-//			curNode->left = CreateNodeProp();
-//			
-//		}
-//
-//	}
-//}
+void Differentiate(tree_t* exprTree) {
+	assert(exprTree != NULL);
 
-//int Differentiate(tree_t* exprTree) {
-//	assert(exprTree != NULL);
-//
-//	DifferentiateRec(exprTree->root);
-//	
-//	return 0;
-//}
+	DifferentiateNode(exprTree->root);
+
+	RecalcTreeSize(exprTree);
+
+#ifdef _DEBUG
+	if (TreeOk(exprTree)) {
+		PrintTree_OK(*exprTree);
+	}
+	else {
+		PrintTree_NOK(*exprTree);
+	}
+#endif
+}
 
 
 
 int main() {
-	char expr[] = "3/sin(x)*pow(4/12,x*2+1)+5*x";
+	//char expr[] = "3/sin(x)*pow(4/12,x*2+1)+5*x";
+	char expr[] = "1/x*2";
 
 	int syntaxErr = 0;
-	tree_t diffTree = ExprToDiffTree(expr, &syntaxErr);
+	tree_t diffTree = ExprToTree(expr, &syntaxErr);
+	
+	int a = ShowTree(&diffTree);
 
+	Differentiate(&diffTree);
+
+	a = ShowTree(&diffTree);
 }

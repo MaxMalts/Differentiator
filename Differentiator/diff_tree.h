@@ -18,8 +18,8 @@ enum node_type {
 };
 
 struct node_t {
-	value_t value = {};
 	node_type type = unknown_node;
+	value_t value = {};
 	node_t* left = NULL;
 	node_t* right = NULL;
 	node_t* parent = NULL;
@@ -151,6 +151,17 @@ tree_t TreeConstructor(const char* name);
 
 
 /**
+*	Пересчитывает размер дерева
+*
+*	@param tree Дерево
+*
+*	@return См. возвращаемое значение CalcNodesCount
+*/
+
+int RecalcTreeSize(tree_t* tree);
+
+
+/**
 *	Создает новое дерево с заданным корнем
 *
 *	@param[in] root Корень
@@ -201,7 +212,7 @@ node_t* CreateNode();
 *	@return Указатель на новый узел. Не забудьте освободить память по этому указателю!
 */
 
-node_t* CreateNodeProp(node_t* parent, value_t value, node_type type, node_t* left, node_t* right);
+node_t* CreateNodeProp(node_t* parent, node_type type, value_t value, node_t* left, node_t* right);
 
 
 /**
