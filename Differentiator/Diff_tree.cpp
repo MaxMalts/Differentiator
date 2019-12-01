@@ -1,0 +1,1914 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <assert.h>
+#include <ctype.h>
+#include "diff_tree.h"
+#include "buffer.h"
+
+
+#ifdef _DEBUG
+#define PrintTree_OK(tree) TreeDump(&tree, __FILE__, __LINE__, __FUNCTION__, "just looking");
+#define PrintTree_NOK(tree) TreeDump(&tree, __FILE__, __LINE__, __FUNCTION__, "tree has an error");
+#else
+#define PrintTree_OK(tree) ;
+#define PrintTree_NOK(tree) ;
+#endif
+
+
+/*  Не для пользователя
+*	Проверяет, соответствует ли аргумент одной из сторон узла
+*
+*	@param[in] side Сторона
+*
+*	@return 1 (true) - соответствует; 0 (false) - не соответствует
+*/
+
+int SideIsCorrect(const int side) {
+	if (side == LEFT_CHILD || side == RIGHT_CHILD) {
+		return 1;
+	}
+	return 0;
+}
+
+
+/**
+*	Считает количество сыновей
+*
+*	@param[in] node Узел
+*
+*	@return Количество сыновей (0, 1, 2)
+*/
+
+int NodeChildsCount(node_t* node) {
+	assert(node != NULL);
+
+	if (node->left != NULL && node->right != NULL) {
+		return 2;
+	}
+	else if (node->left != NULL || node->right != NULL) {
+		return 1;
+	}
+	return 0;
+}
+
+
+/**
+*	Копирует элемент типа value_t
+*
+*	@param[out] dest Куда копируем
+*	@param[in] source Откуда копируем
+*
+*	@return 0 - все прошло нормально
+*/
+
+int CopyValue_t(value_t dest, value_t source) {
+	assert(dest != NULL);
+	assert(source != NULL);
+
+	strcpy(dest, source);
+
+	return 0;
+}
+
+
+/**
+*	Преобразует value_t в строку
+*
+*	@param[in] value Элемент типа value_t
+*
+*	@return Указатель на строку. Не забудьте освободить память по этому указателю!
+*/
+
+char* Value_tToStr(const value_t value) {
+	assert(value != NULL);
+
+	const int value_tMaxStrSize = treeStrMaxSize;
+
+	char* str = (char*)calloc(value_tMaxStrSize, sizeof(char));
+	strcpy(str, value);
+
+	return str;
+}
+
+
+/**
+*	Сравнивает значения value_t
+*
+*	@param[in] value1 Первое значение
+*	@param[in] value2 Второе значение
+*
+*	@return < 0 - первое значение меньше второго; 0 - значения равны; > 0 - первое значение больше второго
+*/
+
+int ValueCmp(value_t* value1, value_t* value2) {
+	assert(value1 != NULL);
+	assert(value2 != NULL);
+
+	return strcmp(*value1, *value2);
+}
+
+/**
+*	Преобразует строку в value_t
+*
+*	@param[in] valueS Строка
+*	@param[out] value Значение value_t
+*
+*	@return 1 - в строке неверное представление value_t; 0 - все прошло нормально
+*/
+
+int StrToValue_t(const char* valueS, value_t* value) {
+	assert(valueS != NULL);
+	assert(value != NULL);
+	
+	strcpy(*value, valueS);
+
+	return 0;
+}
+
+
+/*  Не для пользователя
+*	Проверяет узлы ниже заданного и считает их количество
+*
+*	@param[in] node Узел
+*	@param[out] NNodes Количество узлов. На входе значение должно быть 0!
+*
+*	@return 1 - ошибка есть; 0 - ошибок нет
+*/
+
+#ifdef _DEBUG
+int NodesOk(node_t* node, int* NNodes) {
+	assert(node != NULL);
+	assert(NNodes != NULL);
+	
+	(*NNodes)++;
+	int err = 0;
+	if (node->left != NULL) {
+		if (node->left->parent != node) {
+			return 1;
+		}
+		err = NodesOk(node->left, NNodes);
+		if (err != 0) {
+			return err;
+		}
+	}
+	if (node->right != NULL) {
+		if (node->right->parent != node) {
+			return 1;
+		}
+		err = NodesOk(node->right, NNodes);
+		if (err != 0) {
+			return err;
+		}
+	}
+	
+	return 0;
+}
+#endif
+
+
+/**
+*	Проверяет дерево и записывает в него код ошибки
+*
+*	@param[in] tree Дерево
+*
+*	@return 0 - дерево некорректное; 1 - дерево корректное
+*/
+
+#ifdef _DEBUG
+int TreeOk(tree_t* tree) {
+	if (tree == NULL) {
+		return 0;
+	}
+	if (tree->size < 0) {
+		tree->err = 1;
+		return 0;
+	}
+	if (tree->root == NULL) {
+		tree->err = 2;
+		return 0;
+	}
+	int actSize = 0;
+	if (NodesOk(tree->root, &actSize) != 0) {
+		tree->err = 3;
+	}
+	if (actSize != tree->size) {
+		tree->err = 4;
+		return 0;
+	}
+
+	return 1;
+}
+#endif
+
+
+/*  Не для пользователя
+*	Выводит информацию о дереве. Для визуализации дерева, используйте ShowTree().
+*
+*	@param[in] tree Дерево
+*	@param[in] file Название файла, окуда вызвали функцию
+*	@param[in] line Номер строки, из которой вызвали функцию
+*	@param[in] function Имя функции, из которой вызвали функцию
+*	@param[in] reason Причина, по которой вызвали функцию
+*/
+
+#ifdef _DEBUG
+void TreeDump(tree_t* tree, const char* file, const int line, const char* function, const char* reason) {
+	assert(tree != NULL);
+	assert(file != NULL);
+	assert(line > 0);
+	assert(function != NULL);
+	assert(reason != NULL);
+
+	char status[10] = "ok";
+	if (tree->err != 0) {
+		strcpy(status, "ERR");
+	}
+
+	printf("\nInfo about a tree from file: %s, function: %s, line: %d, reason: %s:\n", file, function, line, reason);
+	printf("tree_t \"%s\" (%p):    (%s)\n", tree->name, tree, status);
+
+	printf("\tsize = %d\n", tree->size);
+
+	char* valueS = Value_tToStr(tree->root->value);
+	printf("\troot (%p):\n", tree->root);
+	printf("\t\tvalue: %s;\n", valueS);
+	printf("\t\ttype: %d;\n", tree->root->type);
+	printf("\t\tleft: %p;\n", tree->root->left);
+	printf("\t\tright: %p;\n", tree->root->right);
+	printf("\t\tparent: %p;\n", tree->root->parent);
+	free(valueS);
+
+	printf("err = %d\n\n\n", tree->err);
+}
+#endif
+
+
+/*  Не для пользователя
+*	Рекурсивно записывает информацию обо всех узлах для программы Graphviz.\
+ Информация, написанная этой функцией не является полноценным оформлением дерева.
+*
+*	@param[in] gvFile Файл для записи
+*	@param[in] node Корневой узел
+*
+*	@return 0 - все прошло нормально
+*/
+
+int NodesOutput(FILE* gvFile, node_t* node) {
+	assert(gvFile != NULL);
+	assert(node != NULL);
+
+	char valueS[100] = "";
+	if (node->type == num_node) {
+		float num = 0;
+		memcpy((char*)&num, node->value, sizeof(float));
+		sprintf(valueS, "%f", num);
+	}
+	else {
+		strcpy(valueS, Value_tToStr(node->value));
+	}
+
+#ifdef _DEBUG
+	fprintf(gvFile, "\t%d [label=\"{%p|%p|%d|%s|{%p|%p}}\"]\n",
+		    (int)node, node, node->parent, node->type, valueS, node->left, node->right);
+#else
+	fprintf(gvFile, "\t%d [label=\"{%d|%s}\"]", (int)node, node->type valueS);
+#endif
+	//free(valueS);
+
+	if (node->left != NULL) {
+		NodesOutput(gvFile, node->left);
+		fprintf(gvFile, "\t%d -> %d\n", (int)node, (int)node->left);
+	}
+	if (node->right != NULL) {
+		NodesOutput(gvFile, node->right);
+		fprintf(gvFile, "\t%d -> %d\n", (int)node, (int)node->right);
+	}
+
+	return 0;
+}
+
+
+/*  Не для пользователя
+*	Рекурсивная функция для создания массива строк "последниъ" узлов
+*
+*	@param[in] curNode Текущий узел
+*	@param[out] words Массив слов
+*	@param[out] NNodes Количество слов
+*
+*	@return 1 - проблема при реаллокации words; 0 - все прошло нормально
+*/
+
+int LastNodesValuesRec(node_t* curNode, char**& words, int* NNodes) {
+	assert(curNode != NULL);
+	assert(words != NULL);
+	assert(NNodes != NULL);
+
+	if (NodeChildsCount(curNode) == 0) {
+		(*NNodes)++;
+		words = (char**)realloc(words, *NNodes * sizeof(char*));
+		if (words == NULL) {
+			return 1;
+		}
+
+		words[*NNodes - 1] = (char*)calloc(treeStrMaxSize, sizeof(char));
+		if (words[*NNodes - 1] == NULL) {
+			return 1;
+		}
+		strncpy(words[*NNodes - 1], curNode->value, treeStrMaxSize - 1);
+	}
+	else {
+		if (curNode->left != NULL) {
+			int err = LastNodesValuesRec(curNode->left, words, NNodes);
+			if (err != 0) {
+				return err;
+			}
+		}
+		if (curNode->right != NULL) {
+			int err = LastNodesValuesRec(curNode->right, words, NNodes);
+			if (err != 0) {
+				return err;
+			}
+		}
+	}
+
+	return 0;
+}
+
+
+/**
+*	Создает массив строк со значениями "последних" узлов
+*
+*	@param[in] tree Дерево
+*	@param[out] words Массив строк (на входе должен быть NULL)
+*	@param[out] NNodes Количество строк
+*
+*	@return 1 - на вход подалось некорректное дерево; 2 - words != NULL;\
+ 3 - проблема при реаллокации words; 4 - другая ошибка; 0 - все прошло нормально
+*/
+
+int LastNodesWords(tree_t* tree, char**& words, int* NNodes) {
+	assert(tree != NULL);
+	assert(NNodes != NULL);
+
+#ifdef _DEBUG
+	if (!TreeOk(tree)) {
+		PrintTree_NOK(*tree);
+		return 1;
+	}
+#endif
+
+	if (words != NULL) {
+		return 2;
+	}
+
+	*NNodes = 0;
+	words = (char**)calloc(1, sizeof(char*));
+	int err = LastNodesValuesRec(tree->root, words, NNodes);
+
+	if (err != 0) {
+		return 3;
+	}
+	if (*NNodes > tree->size) {
+		return 4;
+	}
+	return 0;
+}
+
+/**
+*	Определяет размер файла с учетом символа '\r'
+*
+*	@param[in] f Файл
+*
+*	@return Размер файла. Если размер отрицательный, то произошла ошибка
+*/
+
+int GetFileSizeTr(FILE* f) {
+	assert(f != NULL);
+	if (fseek(f, 0, SEEK_END) != 0) {
+		return -1;
+	}
+
+	int fileSize = ftell(f);
+
+	if (fseek(f, 0, SEEK_SET) != 0) {
+		return -1;
+	}
+
+	return fileSize;
+}
+
+
+/**
+*	Удаляет маркер UTF-8 из файла (конвертирует из UTF-8 BOM в UTF-8)
+*
+*	@param[in] fName Имя файла
+*
+*	@return 1 - не удалось открыть файл на чтение; 2 - не удалось определить размер файла;\
+ 3 - не удалось прочитать файл; 4 - не удалось открыть файл на запись;\
+ 5 - не удалось записать в файл; 0 - все прошло нормально
+*/
+
+int DeleteUtfMarker(const char* fName) {
+	assert(fName != NULL);
+
+	FILE* f = fopen(fName, "rb");
+	if (f == NULL) {
+		return 1;
+	}
+
+	int fSize = GetFileSizeTr(f);
+	if (fSize < 0) {
+		return 2;
+	}
+
+	char* buf = (char*)calloc(fSize + 1, sizeof(char));
+	if (fread(buf, sizeof(char), fSize, f) != fSize) {
+		return 3;
+	}
+	fclose(f);
+
+	f = fopen(fName, "wb");
+	if (f == NULL) {
+		return 4;
+	}
+	if (fwrite(&buf[3], sizeof(char), fSize - 3, f) != fSize - 3) {
+		return 5;
+	}
+	fclose(f);
+
+	return 0;
+}
+
+
+/**
+*	Рисует дерево с помощью программы Graphviz.
+*
+*	@param[in] tree Дерево
+*	@param[in] foutName Имя файла с картнкой (по умолчанию - "tree.png")
+*	@param[in] gvFileName Имя файла с описанием узлов для Graphviz (по умолчанию - "tree.gv")
+*
+*	@return 1 - не удалось открыть файл для записи; 2 - на вход подалось дерево\
+с ошибкой (только в режиме отладки); 0 - все прошло нормально
+*/
+
+int CreateTreeImage(tree_t* tree, const char foutName[], const char gvFileName[]) {
+	assert(tree != NULL);
+	assert(gvFileName != NULL);
+
+#ifdef _DEBUG
+	if (!TreeOk(tree)) {
+		PrintTree_NOK(*tree);
+		return 2;
+	}
+#endif
+
+	char* tempGvFileName = (char*)calloc(strlen(gvFileName) + 7, sizeof(char));
+	sprintf(tempGvFileName, "%s.temp", gvFileName);
+	FILE* tempGvFile = fopen(tempGvFileName, "w");
+	if (NULL == tempGvFile) {
+		return 1;
+	}
+	
+#ifdef _DEBUG
+	fprintf(tempGvFile, "digraph %s {\n", tree->name);
+	fprintf(tempGvFile, "\tnode [shape=record]\n\n");
+	fprintf(tempGvFile, "\tformat_node [label=\"{adress|parent|type|value|{left|right}}\"]\n\n");
+#else
+	fprintf(tempGvFile, "digraph {\n");
+	fprintf(tempGvFile, "\tnode [shape=record]\n\n");
+	fprintf(tempGvFile, "\tformat_node [label=\"{type|value}\"]\n\n");
+#endif
+
+	NodesOutput(tempGvFile, tree->root);
+
+	fprintf(tempGvFile, "}");
+	fclose(tempGvFile);
+
+	char sysCommand[1000] = "";
+	sprintf(sysCommand, "start /wait powershell -command \"get-content -path %s | \
+out-file %s -encoding utf8\"", tempGvFileName, gvFileName);
+	system(sysCommand);
+
+	DeleteUtfMarker(gvFileName);
+	
+	sprintf(sysCommand, "del %s", tempGvFileName);
+	system(sysCommand);
+	free(tempGvFileName);
+
+	sprintf(sysCommand, "start /wait dot -Tpng %s -o %s", gvFileName, foutName);
+	system(sysCommand);
+
+	return 0;
+}
+
+
+/**
+*	Создает изображение дерева и открывает его. Функция медленная, не используйте часто!
+*
+*	@param[in] tree Дерево
+*
+*	@return 1 - Проблема при создании изображения; 2 - проблема при открытии изображения;\
+ 3 - на вход подалось дерево с ошибкой (только в режиме отладки); 0 - все прошло нормально
+*/
+
+int ShowTree(tree_t* tree) {
+	assert(tree != NULL);
+
+#ifdef _DEBUG
+	if (!TreeOk(tree)) {
+		PrintTree_NOK(*tree);
+		return 3;
+	}
+#endif
+
+	//Чтобы не использовать Sleep() из windows.h.
+	//Если этого не сделать, то предыдущее изображение открывается как новое.
+	int a = 0;
+	for (int i = 0; i < 1000000; i++) {
+		a++;
+		if (a % 100 == 0) {
+			i -= 99;
+		}
+	}
+
+	if (CreateTreeImage(tree) == 1) {
+		return 1;
+	}
+	if (system("tree.png") != 0) {
+		return 2;
+	}
+	return 0;
+}
+
+
+/**
+*	Создает новое дерево. После вызова, измените значение корня\
+ на нужное с помощью функции ChangeNodeValue()!
+ *
+ *	@param[in] name Имя дерева
+ *
+ *	@return Указатель на созданное дерево
+*/
+
+tree_t TreeConstructor(const char* name) {
+	assert(name != NULL);
+
+	tree_t tree = {};
+	
+#ifdef _DEBUG
+	strcpy(tree.name, name);
+	tree.err = 0;
+#endif
+	
+	tree.root = (node_t*)calloc(1, sizeof(node_t));
+	tree.size = 1;
+
+#ifdef _DEBUG
+	if (TreeOk(&tree)) {
+		PrintTree_OK(tree);
+	}
+	else {
+		PrintTree_NOK(tree);
+	}
+#endif
+
+	return tree;
+}
+
+
+/*  Не для пользователя
+*	Считает количество узлов-потомков с учетом входного узла (рекурсивно)
+*
+*	@param[in] node Узел
+*	@param[out] size Количество
+*
+*	@return 0 - все прошло нормально
+*/
+
+int CalcNodesCount(node_t* node, int* size) {
+	assert(node != NULL);
+	assert(size != NULL);
+
+	if (node->left != NULL) {
+		int err = CalcNodesCount(node->left, size);
+		if (err != 0) {
+			return err;
+		}
+	}
+	if (node->right != NULL) {
+		int err = CalcNodesCount(node->right, size);
+		if (err != 0) {
+			return err;
+		}
+	}
+	(*size)++;
+	return 0;
+}
+
+
+/*  Не для пользователя
+*	Пересчитывает размер дерева
+*
+*	@param tree Дерево
+*
+*	@return См. возвращаемое значение CalcNodesCount
+*/
+
+int RecalcTreeSize(tree_t* tree) {
+	assert(tree != NULL);
+	assert(tree->root != NULL);
+
+	return CalcNodesCount(tree->root, &tree->size);
+}
+
+
+/*  Не для пользователя
+*	Создает новое дерево с заданным корнем
+*
+*	@param[in] root Корень
+*	@param[in] name Имя дерева
+*
+*	@return Созданное дерево
+*/
+
+tree_t TreeRootConstructor(node_t* root, const char* name) {
+	assert(root != NULL);
+	assert(root->parent == NULL);
+	assert(name != NULL);
+
+	tree_t tree = {};
+
+#ifdef _DEBUG
+	strcpy(tree.name, name);
+	tree.err = 0;
+#endif
+
+	tree.root = root;
+	RecalcTreeSize(&tree);
+
+#ifdef _DEBUG
+	if (TreeOk(&tree)) {
+		PrintTree_OK(tree);
+	}
+	else {
+		PrintTree_NOK(tree);
+	}
+#endif
+
+	return tree;
+}
+
+
+/**
+*	Перезаписывает значение узла
+*
+*	@param node Узел
+*	@param[in] value Значение
+*
+*	@return 0 - все прошло нормально
+*/
+
+int ChangeNodeValue(node_t* node, value_t value) {
+	assert(node != NULL);
+
+	CopyValue_t(node->value, value);
+
+	return 0;
+}
+
+
+/**
+*	Читает значение узла
+*
+*	@param[in] node Узел
+*	@param[out] value Значение
+*
+*	@return 0 - все прошло нормально
+*/
+
+int GetNodeValue(node_t* node, value_t* value) {
+	assert(node != NULL);
+	assert(value != NULL);
+
+	strcpy(*value, node->value);
+
+	return 0;
+}
+
+/*  Не для пользователя
+*	Создает новый узел
+*
+*	@return Указатель на новый узел. Не забудьте освободить память по этому указателю!
+*/
+
+node_t* CreateNode() {
+
+	node_t* node = (node_t*)calloc(1, sizeof(node_t));
+	node->left = NULL;
+	node->right = NULL;
+	node->parent = NULL;
+
+	return node;
+}
+
+/**
+*	Добавляет узел с указанной стороны по значению
+*
+*	@param tree Дерево, в котором находится узел
+*	@param node Узел, к которому добавляем
+*	@param[in] value Значение нового узла
+*	@param[in] side Сторона, с которой добавляем (LEFT_CHILD, RIGHT_CHILD)
+*	@param[out] newNode Адрес нового узла
+*
+*	@return 1 - у узла уже был дочерний узел с соответствующей стороны;\
+ 2 - параметр side имел некорректное значние; 3 - на вход подалось дерево с\
+  ошибкой (только в режиме отладки); 0 - все прошло нормально
+*/
+
+int AddChild(tree_t* tree, node_t* node, value_t value, const int side, node_t** createdNode) {
+	assert(tree != NULL);
+	assert(node != NULL);
+
+#ifdef _DEBUG
+	if (!TreeOk(tree)) {
+		PrintTree_NOK(*tree);
+		return 3;
+	}
+#endif
+
+	if (!SideIsCorrect(side)) {
+		return 2;
+	}
+
+	node_t* newNode = CreateNode();
+	strcpy(newNode->value, value);
+	newNode->parent = node;
+
+	switch (side) {
+	case LEFT_CHILD:
+		if (node->left != NULL) {
+			return 1;
+		}
+		node->left = newNode;
+		break;
+	case RIGHT_CHILD:
+		if (node->right != NULL) {
+			return 1;
+		}
+		node->right = newNode;
+		break;
+	}
+
+	tree->size++;
+
+	if (createdNode != NULL) {
+		*createdNode = newNode;
+	}
+
+#ifdef _DEBUG
+	if (TreeOk(tree)) {
+		PrintTree_OK(*tree);
+	}
+	else {
+		PrintTree_NOK(*tree);
+	}
+#endif
+
+	return 0;
+}
+
+
+///**
+//*	Добавляет дочерний узел с указанной стороны по адресу
+//*
+//*	@param tree Дерево, в котором находится узел
+//*	@param parentNode Узел, к которому добавляем
+//*	@param[in] childNode Дочерний узел
+//*	@param[in] side Сторона, с которой добавляем (LEFT_CHILD, RIGHT_CHILD)
+//*
+//*	@return 1 - у узла уже был дочерний узел с соответствующей стороны;\
+// 2 - параметр side имел некорректное значние; 0 - все прошло нормально
+//*/
+//
+//int AddNode(tree_t* tree, node_t* parentNode, node_t* childNode, const int side) {
+//	assert(tree != NULL);
+//	assert(parentNode != NULL);
+//	assert(childNode != NULL);
+//
+//	if (!SideIsCorrect(side)) {
+//		return 2;
+//	}
+//
+//	switch (side) {
+//	case LEFT_CHILD:
+//		if (parentNode->left != NULL) {
+//			return 1;
+//		}
+//		parentNode->left = childNode;
+//		break;
+//	case RIGHT_CHILD:
+//		if (parentNode->right != NULL) {
+//			return 1;
+//		}
+//		parentNode->right = childNode;
+//		break;
+//	}
+//
+//	return 0;
+//}
+
+/**
+*	Удаляет дочерний узел
+*
+*	@param tree Дерево, в котором находится узел
+*	@param node Узел, в котором освобождаем удаляем узел
+*	@param[in] side Сторона, с которой удаляем (LEFT_CHILD, RIGHT_CHILD)
+*
+*	@return 1 - не было дочернего узла; 2 - дочерний узел оказался поддеревом;\
+ 3 - параметр side имел некорректное значние; 4 - на вход подалось дерево с\
+ ошибкой (только в режиме отладки); 0 - все прошло нормально
+*/
+
+int DeleteChild(tree_t* tree, node_t* node, const int side) {
+	assert(tree != NULL);
+	assert(node != NULL);
+
+#ifdef _DEBUG
+	if (!TreeOk(tree)) {
+		PrintTree_NOK(*tree);
+		return 4;
+	}
+#endif
+
+	if (!SideIsCorrect(side)) {
+		return 3;
+	}
+
+	switch (side) {
+	case LEFT_CHILD:
+		if (node->left == NULL) {
+			return 1;
+		}
+		else if (NodeChildsCount(node->left) > 0) {
+			return 2;
+		}
+
+		free(node->left);
+		node->left = NULL;
+		break;
+
+	case RIGHT_CHILD:
+		if (node->right == NULL) {
+			return 1;
+		}
+		else if (NodeChildsCount(node->right) > 0) {
+			return 2;
+		}
+
+		free(node->right);
+		node->right = NULL;
+		break;
+	}
+
+	tree->size--;
+
+#ifdef _DEBUG
+	if (TreeOk(tree)) {
+		PrintTree_OK(*tree);
+	}
+	else {
+		PrintTree_NOK(*tree);
+	}
+#endif
+
+	return 0;
+}
+
+
+/**
+*	Добавляет поддерево в дерево по указанному узлу.
+*
+*	@param tree Дерево, в которое добавляем
+*	@param subtree Поддерево, которое добавляем. После присоединения деконструируется!
+*	@param node Узел, к которому добавляем
+*	@param[in] side Сторона узла, с которой добавляем
+*
+*	@return 1 - у узла уже был дочерний узел с соответствующей стороны;\
+ 2 - параметр side имел некорректное значние; 3, 4 - на вход подалось\
+ дерево или соответственно поддерево с ошибкой (только в режиме отладки);\
+ 0 - все прошло нормально
+*/	
+
+int AddSubtree(tree_t* tree, tree_t* subtree, node_t* node, const int side) {
+	assert(tree != NULL);
+	assert(subtree != NULL);
+	assert(node != NULL);
+
+#ifdef _DEBUG
+	if (!TreeOk(tree)) {
+		PrintTree_NOK(*tree);
+		return 3;
+	}
+#endif
+#ifdef _DEBUG
+	if (!TreeOk(subtree)) {
+		PrintTree_NOK(*subtree);
+		return 4;
+	}
+#endif
+
+	if (!SideIsCorrect(side)) {
+		return 2;
+	}
+
+	switch (side) {
+	case LEFT_CHILD:
+		if (node->left != NULL) {
+			return 1;
+		}
+		node->left = subtree->root;
+		break;
+
+	case RIGHT_CHILD:
+		if (node->right != NULL) {
+			return 1;
+		}
+		node->right = subtree->root;
+		break;
+	}
+	subtree->root->parent = node;
+	tree->size += subtree->size;
+
+	TreeDestructor(subtree);
+
+#ifdef _DEBUG
+	if (TreeOk(tree)) {
+		PrintTree_OK(*tree);
+	}
+	else {
+		PrintTree_NOK(*tree);
+	}
+#endif
+
+	return 0;
+}
+
+
+/*  Не для пользователя
+*	Удаляет все дочерние узлы и сам узел
+*
+*	@param Узел
+*	@param[in] count Количество уже удаленных узлов\
+ (при первичном вызове опустить, переменная только для рекурсивного вызова)
+*
+*	@return Количество удаленных узлов
+*/
+
+int DeleteNodes(node_t* node, int count = 0) {
+	assert(node != NULL);
+	assert(count >= 0);
+
+	if (node->left != NULL) {
+		count = DeleteNodes(node->left, count);
+	}
+	if (node->right != NULL) {
+		count = DeleteNodes(node->right, count);
+	}
+	free(node);
+
+	return count + 1;
+}
+
+
+/**
+*	Удаляет поддерево
+*
+*	@param tree Дерево
+*	@param node Узел, поддерево удаляется начиная с дочернего узла
+*	@param side Сторона дочернего узла
+*
+*	@return 1 - не было дочернего узла; 2 - параметр side имел некорректное значние;\
+ 3 - на вход подалось дерево с ошибкой (только в режиме отладки); 0 - все прошло нормально
+*/
+
+int DeleteSubtree(tree_t* tree, node_t* node, const int side) {
+	assert(tree != NULL);
+	assert(node != NULL);
+
+#ifdef _DEBUG
+	if (!TreeOk(tree)) {
+		PrintTree_NOK(*tree);
+		return 3;
+	}
+#endif
+
+	if (!SideIsCorrect(side)) {
+		return 2;
+	}
+
+	int deletedCount = 0;
+	switch (side) {
+	case LEFT_CHILD:
+		if (node->left == NULL) {
+			return 1;
+		}
+
+		deletedCount = DeleteNodes(node->left);
+		node->left = NULL;
+		break;
+
+	case RIGHT_CHILD:
+		if (node->right == NULL) {
+			return 1;
+		}
+
+		deletedCount = DeleteNodes(node->right);
+		node->right = NULL;
+		break;
+	}
+
+	tree->size -= deletedCount;
+	assert(tree->size >= 0);
+
+#ifdef _DEBUG
+	if (TreeOk(tree)) {
+		PrintTree_OK(*tree);
+	}
+	else {
+		PrintTree_NOK(*tree);
+	}
+#endif
+
+	return 0;
+}
+
+
+/**
+*	Пролностью удаляет дерево, включая все его узлы.\
+ Внимение, если данное дерево является поддеревом в\
+ другом дереве, не пользуйтесь этой функцией.
+*
+*	@param[in] tree Дерево
+*
+*	@return 0 - Все прошло нормально
+*/
+
+int DeleteTree(tree_t* tree) {
+	assert(tree != NULL);
+
+#ifdef _DEBUG
+	if (!TreeOk(tree)) {
+		PrintTree_NOK(*tree);
+	}
+#endif
+
+	DeleteNodes(tree->root);
+	TreeDestructor(tree);
+
+	return 0;
+}
+
+
+/**
+*	Деконструктор дерева. Внимание, данная функция не удаляет узлы дерева!\
+ Чтобы удалить узлы, воспользуйтесь функцией DeleteTree()!
+*
+*	@param tree Дерево
+*
+*	@return 0 - Все прошло нормально
+*/
+
+int TreeDestructor(tree_t* tree) {
+	assert(tree != NULL);
+
+	tree->root = NULL;
+	tree->size = 0;
+
+	return 0;
+}
+
+
+///*  Не для пользователя
+//*	Создает код по узлу
+//*
+//*	@param[in] node Узел
+//*	@param[out] codeBuf Буфер с кодом
+//*
+//*	@return 0 - все прошло нормально
+//*/
+//
+//int NodesToCode(node_t* node, buf_t* codeBuf) {
+//	assert(node != NULL);
+//	assert(codeBuf != NULL);
+//
+//	char* valueS = Value_tToStr(node->value);
+//	
+//	if (NodeChildsCount(node) > 0) {
+//		Bufcat(codeBuf, valueS);
+//		free(valueS);
+//		Bufcat(codeBuf, "{");
+//
+//		if (node->left != NULL) {
+//			NodesToCode(node->left, codeBuf);
+//		}
+//		else {
+//			Bufcat(codeBuf, "@");
+//		}
+//		Bufcat(codeBuf, ",");
+//		if (node->right != NULL) {
+//			NodesToCode(node->right, codeBuf);
+//		}
+//		else {
+//			Bufcat(codeBuf, "@");
+//		}
+//		Bufcat(codeBuf, "}");
+//	}
+//	else {
+//		Bufcat(codeBuf, "{");
+//		Bufcat(codeBuf, valueS);
+//		Bufcat(codeBuf, "}");
+//		free(valueS);
+//	}
+//
+//	return 0;
+//}
+//
+//
+///**
+//*	Создает код по дереву
+//*
+//*	@param[in] tree Дерево
+//*	@param[out] size Длина полученного кода (без учета '\0').\
+// Если значение отрицательное, то возникла следующая ошибка:\
+// -1 - на вход подалось дерево с ошибкой (только в режиме отладки);\
+// -2 -проблема при создании буфера; 0 - все прошло нормально
+//*
+//*	@return Указатель на буфер с кодом. В случае ошибки равен NULL.\
+// Не забудьте освободить память по этому указателю!
+//*/
+//
+//char* TreeToCode(tree_t* tree, int* size) {
+//	assert(tree != NULL);
+//
+//#ifdef _DEBUG
+//	if (!TreeOk(tree)) {
+//		PrintTree_NOK(*tree);
+//		if (size != NULL) {
+//			*size = -1;
+//		}
+//		return NULL;
+//	}
+//#endif
+//
+//	int bufConstrErr = 0;
+//	buf_t codeBuf = BufConstructor('w', &bufConstrErr);
+//	if (bufConstrErr != 0) {
+//		if (size != NULL) {
+//			*size = -2;
+//		}
+//		return NULL;
+//	}
+//	
+//	Bufcat(&codeBuf, "{");
+//	NodesToCode(tree->root, &codeBuf);
+//	Bufcat(&codeBuf, "}");
+//
+//	char* res = (char*)calloc(codeBuf.lastChar + 2, sizeof(char));
+//	strncpy(res, codeBuf.str, codeBuf.lastChar + 1);
+//	if (size != NULL) {
+//		*size = codeBuf.lastChar + 1;
+//	}
+//
+//	BufDestructor(&codeBuf);
+//
+//	return res;
+//}
+//
+//
+///*  Не для пользователя
+//*	Рекурсивно создает узлы по коду
+//*
+//*	@param[in] buf Буфер с кодом
+//*	@param[out] node Текущий узел. Внимание, при первичном вызове\
+// должен быть NULL, сюда запишется корневой узел!
+//*	@param[out] size
+//*
+//*	@return 1 - ошибка в коде; 0 - все прошло нормально
+//*/
+//
+//int CodeToNodes(buf_t* buf, node_t*& node, int* size) {
+//	assert(buf != NULL);
+//	assert(size != NULL);
+//
+//	char curCh = Bgetc(buf);
+//	if (curCh == '{') {
+//		char nextCh = Bgetc(buf);
+//		if (nextCh == EOB) {
+//			return 1;
+//		}
+//		if (nextCh != '{') {
+//			Bseek(buf, -1, BSEEK_CUR);
+//		}
+//
+//		if (Bgetc(buf) == '@') {
+//			node->left = NULL;
+//
+//			int err = 0;
+//			err = CodeToNodes(buf, node, size);
+//			if (err != 0) {
+//				return err;
+//			}
+//		}
+//		else {
+//			Bseek(buf, -1, BSEEK_CUR);
+//
+//			char valueS[100] = "";
+//			ReadToChar(valueS, buf, "{}");
+//
+//			node_t* newNode = CreateNode();
+//
+//			value_t value = {};
+//			StrToValue_t(valueS, &value);
+//			ChangeNodeValue(newNode, value);
+//			if (node != NULL) {
+//				node->left = newNode;
+//			}
+//			newNode->parent = node;
+//			if (node == NULL) {
+//				node = newNode;
+//			}
+//			(*size)++;
+//
+//			int err = 0;
+//			err = CodeToNodes(buf, newNode, size);
+//			if (err != 0) {
+//				return err;
+//			}
+//		}
+//	}
+//	else if (curCh == ',') {
+//		char nextCh = Bgetc(buf);
+//		if (nextCh == EOB) {
+//			return 1;
+//		}
+//		if (nextCh != '{') {
+//			Bseek(buf, -1, BSEEK_CUR);
+//		}
+//
+//		if (Bgetc(buf) == '@') {
+//			node->right = NULL;
+//
+//			int err = 0;
+//			err = CodeToNodes(buf, node, size);
+//			if (err != 0) {
+//				return err;
+//			}
+//		}
+//		else {
+//			Bseek(buf, -1, BSEEK_CUR);
+//
+//			char valueS[100] = "";
+//			ReadToChar(valueS, buf, "{}");
+//
+//			node_t* newNode = CreateNode();
+//
+//			value_t value = {};
+//			StrToValue_t(valueS, &value);
+//			ChangeNodeValue(newNode, value);
+//			node->right = newNode;
+//			newNode->parent = node;
+//			(*size)++;
+//
+//			int err = 0;
+//			err = CodeToNodes(buf, newNode, size);
+//			if (err != 0) {
+//				return err;
+//			}
+//		}
+//	}
+//	else if (curCh == '}') {
+//
+//		if (node->parent != NULL) {
+//			int err = 0;
+//			err = CodeToNodes(buf, node->parent, size);
+//			if (err != 0) {
+//				return err;
+//			}
+//		}
+//	}
+//	else {
+//		return 1;
+//	}
+//
+//	return 0;
+//}
+//
+//
+///**
+//*	Создает дерево по коду
+//*
+//*	@param[in] code Код
+//*	@param[in] treeName Имя дерева (по умолчанию "tree_from_code")
+//*	@param[out] err Код ошибки (по желанию): 1 - произвольная ошибка;\
+// 2 - ошибка в коде; 0 - все прошло нормально
+//*
+//*	@return Сгенерированное дерево
+//*/
+//
+//tree_t CodeToTree(char* code, const char* treeName, int* err) {
+//	assert(code != NULL);
+//
+//	tree_t tree = TreeConstructor(treeName);
+//
+//#ifdef _DEBUG
+//	if (TreeOk(&tree)) {
+//		PrintTree_OK(tree);
+//	}
+//	else {
+//		PrintTree_NOK(tree);
+//	}
+//#endif
+//
+//	int constructErr = 0;
+//	buf_t codeBuf = BufConstructor('r', code, strlen(code), &constructErr);
+//	if (constructErr != 0) {
+//		*err = 1;
+//		return tree;
+//	}
+//
+//	free(tree.root);
+//	tree.root = NULL;
+//	tree.size = 0;
+//	int retErr = CodeToNodes(&codeBuf, tree.root, &tree.size);
+//	
+//	if(retErr!=0){
+//		if (err != NULL) {
+//			*err = 2;
+//		}
+//		return tree;
+//	}
+//
+//#ifdef _DEBUG
+//	if (!TreeOk(&tree)) {
+//		if (err != NULL) {
+//			*err = 2;
+//		}
+//		return tree;
+//	}
+//#endif
+//
+//	return tree;
+//}
+//
+//
+///*  Не для пользователя
+//*	Ищет узел с указанным значением (рекурсивно)
+//*
+//*	@param[in] curNode Текущий узел (при первичном вызове должен быть корнем дерева!)
+//*	@param[in] value Значение
+//*	@param[out] way Путь до найденного узла (если нашелся) в формате строки из '0' и '1',\
+// где '0' означает левого сына, '1' - правого. В конце строки ставится '\0'
+//*
+//*	@return 1 (true) - узел найдет; 0 (false) - узел не найден
+//*/
+//
+//int NodeByValue(node_t* curNode, value_t* value, buf_t* way, node_t*& foundNode) {
+//	assert(curNode != NULL);
+//	assert(value != NULL);
+//	assert(way != NULL);
+//
+//	if (ValueCmp(&curNode->value, value) == 0) {
+//		Bputc(way, '\0');
+//		foundNode = curNode;
+//		return 1;
+//	}
+//	if (NodeChildsCount(curNode) == 0) {
+//		Bseek(way, -1, SEEK_CUR);
+//		Bputc(way, '\0');
+//		Bseek(way, -1, SEEK_CUR);
+//		return 0;
+//	}
+//
+//	if (curNode->left != NULL) {
+//		Bputc(way, '0');
+//		if (NodeByValue(curNode->left, value, way, foundNode) == 1) {
+//			return 1;
+//		}
+//	}
+//	if (curNode->right != NULL) {
+//		Bputc(way, '1');
+//		if (NodeByValue(curNode->right, value, way, foundNode) == 1) {
+//			return 1;
+//		}
+//	}
+//	Bseek(way, -1, SEEK_CUR);
+//	Bputc(way, '\0');
+//	Bseek(way, -1, SEEK_CUR);
+//
+//	return 0;
+//}
+//
+//
+///**
+//*	Ищет узел с указанным значением
+//*
+//*	@param[in] tree Дерево
+//*	@param[in] value Значение
+//*	@param[out] err Ошибка: 1 - произвольная ошибка; 2 - узел с таким значением не найден
+//*
+//*	@return Указатель на строку с путем до найденного узла (если нашелся) в виде '0' и '1',\
+// где '0' означает левого сына, '1' - правого. В конце строки ставится '\0'.\
+// Не забудьте освободить память по этому указателю! Если возникла ошибка, возвращает NULL.
+//*/
+//
+//char* FindNodeByValue(tree_t* tree, value_t* value, node_t*& foundNode, int* err) {
+//	assert(tree != NULL);
+//	assert(value != NULL);
+//
+//	int constrErr = 0;
+//	buf_t way = BufConstructor('w', &constrErr);
+//	if (constrErr != 0) {
+//		if (err != NULL) {
+//			*err = 1;
+//		}
+//		return NULL;
+//	}
+//
+//	if (!NodeByValue(tree->root, value, &way, foundNode)) {
+//		if (err != NULL) {
+//			*err = 2;
+//		}
+//		free(way.str);
+//		BufDestructor(&way);
+//		return NULL;
+//	}
+//
+//	char* resWay = way.str;
+//	BufDestructor(&way);
+//	if (err != NULL) {
+//		*err = 0;
+//	}
+//	return resWay;
+//}
+
+
+
+
+
+
+
+/**
+*	Знак числа
+*
+*	@param[in] var
+*
+*	@return -1 - минус; 1 - плюс
+*/
+
+int Sign(float var) {
+	if (var < 0) {
+		return -1;
+	}
+
+	return 1;
+}
+
+
+/**
+*	Создает число foat по его целой и дробной частям
+*
+*	@param[in] intPart Целая часть (может быть отрицательная)
+*	@param[in] fracPart Дробная часть (всегда положительная)
+*
+*	@return Число float
+*/
+
+float CreateFloat(int intPart, int fracPart) {
+	int tenPow = 1;
+	while (fracPart / tenPow != 0) {
+		tenPow *= 10;
+	}
+
+	float res = intPart + Sign(intPart) * (float)fracPart / tenPow;
+
+	return res;
+}
+
+
+#define assert_syntax(syntaxErr) \
+	if(syntaxErr) {\
+		return {};\
+	}
+
+
+const char* curSequence = "";
+
+node_t* GetG(int* syntaxErr);
+
+node_t* GetE(int* syntaxErr);
+
+node_t* GetT(int* syntaxErr);
+
+node_t* GetP(int* syntaxErr);
+
+node_t* GetFunc(int* syntaxErr);
+
+node_t* GetId(int* syntaxErr);
+
+node_t* GetFNode(int* syntaxErr);
+
+float GetF(int* syntaxErr);
+
+int GetI(int* syntaxErr);
+
+int GetN(int* syntaxErr);
+
+
+
+/**
+*	Правило для получения вырвжения (G::=E'\0')
+*
+*	@param[out] syntaxErr Возникла ли синтаксическая ошбика (1 или 0)
+*
+*	@return Значение выражения
+*/
+
+node_t* GetG(int* syntaxErr) {
+	assert(syntaxErr != NULL);
+
+	node_t* res = GetE(syntaxErr);
+	assert_syntax(*syntaxErr);
+
+	if (*curSequence != '\0') {
+		*syntaxErr = 1;
+		free(res);
+	}
+	assert_syntax(*syntaxErr);
+	curSequence++;
+
+	return res;
+}
+
+
+/**
+*	Правило для получения суммы, разности (E::=T{[+-]T}*)
+*
+*	@param[out] syntaxErr Возникла ли синтаксическая ошбика (1 или 0)
+*
+*	@return Значение выражения
+*/
+
+node_t* GetE(int* syntaxErr) {
+	assert(syntaxErr != NULL);
+
+	node_t* res = NULL;
+
+	node_t* node1 = GetT(syntaxErr);
+	assert_syntax(*syntaxErr);
+
+	if (*curSequence == '+' || *curSequence == '-') {
+		char op = *curSequence;
+		curSequence++;
+
+		node_t* node2 = GetE(syntaxErr);
+		assert_syntax(*syntaxErr);
+
+		res = CreateNode();
+		
+		res->type = op_node;
+		res->value[0] = op;
+		res->value[1] = '\0';
+
+		res->left = node1;
+		res->right = node2;
+		node1->parent = res;
+		node2->parent = res;
+	}
+	else {
+		res = node1;
+	}
+
+	return res;
+}
+
+
+/**
+*	Правило для получения умножения, деления (T::=P{[/*]P}*)
+*
+*	@param[out] syntaxErr Возникла ли синтаксическая ошбика (1 или 0)
+*
+*	@return Значение выражения
+*/
+
+node_t* GetT(int* syntaxErr) {
+	assert(syntaxErr != NULL);
+
+	node_t* res = NULL;
+
+	node_t* node1 = GetP(syntaxErr);
+	assert_syntax(*syntaxErr);
+
+	if (*curSequence == '*' || *curSequence == '/') {
+		char op = *curSequence;
+		curSequence++;
+
+		node_t* node2 = GetT(syntaxErr);
+		assert_syntax(*syntaxErr);
+
+		res = CreateNode();
+
+		res->type = op_node;
+		res->value[0] = op;
+		res->value[1] = '\0';
+
+		res->left = node1;
+		res->right = node2;
+		node1->parent = res;
+		node2->parent = res;
+	}
+	else {
+		res = node1;
+	}
+
+	return res;
+}
+
+
+/**
+*	Правило для получения выражения в скобках, функии или числа(P::='('E')'|Func|F).\
+ Чтобы определить, что именно получать, смотрит первый символ.
+*
+*	@param[out] syntaxErr Возникла ли синтаксическая ошбика (1 или 0)
+*
+*	@return Значение выражения
+*/
+
+node_t* GetP(int* syntaxErr) {
+	assert(syntaxErr != NULL);
+
+	node_t* res = NULL;
+
+	if (*curSequence == '(') {
+		curSequence++;
+
+		res = GetE(syntaxErr);
+		assert_syntax(*syntaxErr);
+
+		if (*curSequence != ')') {
+			*syntaxErr = 1;
+			free(res);
+		}
+		assert_syntax(*syntaxErr);
+		curSequence++;
+	}
+
+	else if (isalpha(*curSequence)) {
+		if (isalpha(*(curSequence + 1))) {
+			res = GetFunc(syntaxErr);
+			assert_syntax(*syntaxErr);
+		}
+		else {
+			res = GetId(syntaxErr);
+			assert_syntax(*syntaxErr);
+		}
+	}
+
+	else {
+		res = GetFNode(syntaxErr);
+		assert_syntax(*syntaxErr);
+	}
+
+	return res;
+}
+
+
+/**
+*	Правило для получения функции ( Func::="sin"'('E')'|"cos"'('E')'...|"pow"'('E','E')' )
+*
+*	@param[out] syntaxErr Возникла ли синтаксическая ошбика (1 или 0)
+*
+*	@return Значение функции
+*/
+
+node_t* GetFunc(int* syntaxErr) {
+	assert(syntaxErr != NULL);
+
+	node_t* res = NULL;
+
+#define DEF_FUNC(str, NParams) \
+	                                                               \
+	else if (strncmp(curSequence, #str, sizeof(#str) - 1) == 0) {  \
+		assert(NParams == 1 || NParams == 2);                      \
+		                                                           \
+		curSequence = curSequence + sizeof(#str) - 1;              \
+		if (*curSequence != '(') {                                 \
+			*syntaxErr = 1;                                        \
+		}                                                          \
+		assert_syntax(*syntaxErr);                                 \
+		curSequence++;                                             \
+		                                                           \
+		res = CreateNode();                                        \
+		res->type = func_node;                                     \
+		strcpy(res->value, #str);                                  \
+		                                                           \
+		res->left = GetE(syntaxErr);                               \
+		assert_syntax(*syntaxErr);                                 \
+		res->left->parent = res;                                   \
+		                                                           \
+		if (NParams == 2) {                                        \
+			if (*curSequence != ',') {                             \
+				*syntaxErr = 1;                                    \
+				free(res->left);                                   \
+				free(res);                                         \
+			}                                                      \
+			assert_syntax(*syntaxErr);                             \
+			curSequence++;                                         \
+			                                                       \
+			res->right = GetE(syntaxErr);                          \
+			assert_syntax(*syntaxErr);                             \
+			res->right->parent = res;                              \
+		}                                                          \
+		                                                           \
+		if (*curSequence != ')') {                                 \
+			*syntaxErr = 1;                                        \
+			                                                       \
+			free(res->left);                                       \
+			if (res->right) {                                      \
+				free(res->right);                                  \
+			}                                                      \
+			free(res);                                             \
+		}                                                          \
+		assert_syntax(*syntaxErr);                                 \
+		curSequence++;                                             \
+	}
+
+	if (0) {}
+#include "Functions.h"
+	else {
+		*syntaxErr = 1;
+	}
+	assert_syntax(*syntaxErr);
+
+#undef DEF_FUNC
+
+	return res;
+}
+
+
+node_t* GetId(int* syntaxErr) {
+	assert(syntaxErr != NULL);
+
+	if (!isalpha(*curSequence)) {
+		*syntaxErr = 1;
+	}
+	assert_syntax(*syntaxErr);
+
+	node_t* res = CreateNode();
+	res->type = var_node;
+	res->value[0] = *curSequence;
+	res->value[1] = '\0';
+
+	curSequence++;
+
+	return res;
+}
+
+
+node_t* GetFNode(int* syntaxErr) {
+	assert(syntaxErr != NULL);
+
+	float val = GetF(syntaxErr);
+	assert_syntax(*syntaxErr);
+
+	node_t* res = CreateNode();
+	res->type = num_node;
+	memcpy(res->value, &val, sizeof(val));
+
+	return res;
+}
+
+
+/**
+*	Правило для получения числа float ( F::=I{'.'N}? )
+*
+*	@param[out] syntaxErr Возникла ли синтаксическая ошбика (1 или 0)
+*
+*	@return Число float
+*/
+
+float GetF(int* syntaxErr) {
+	assert(syntaxErr != NULL);
+
+	float val = 0;
+
+	int intPart = GetI(syntaxErr);
+	assert_syntax(*syntaxErr);
+
+	int fracPart = 0;
+	if (*curSequence == '.') {
+		curSequence++;
+
+		fracPart = GetN(syntaxErr);
+		assert_syntax(*syntaxErr);
+	}
+
+	val = CreateFloat(intPart, fracPart);
+
+	return val;
+}
+
+
+/**
+*	Правило для получения целого числа ( I::=[+-]?N )
+*
+*	@param[out] syntaxErr Возникла ли синтаксическая ошбика (1 или 0)
+*
+*	@return Целое число
+*/
+
+int GetI(int* syntaxErr) {
+	assert(syntaxErr != NULL);
+
+	int val = 0;
+	int sign = 1;
+
+	if (*curSequence == '-') {
+		sign = -1;
+		curSequence++;
+	}
+	else if (*curSequence == '+') {
+		curSequence++;
+	}
+
+	val = GetN(syntaxErr);
+	assert_syntax(*syntaxErr);
+
+	val *= sign;
+
+	return val;
+}
+
+
+/**
+*	Правило для получения целого положительного числа ( N::=['0'-'9']+ )
+*
+*	@param[out] syntaxErr Возникла ли синтаксическая ошбика (1 или 0)
+*
+*	@return Целое положительное число
+*/
+
+int GetN(int* syntaxErr) {
+	assert(syntaxErr != NULL);
+
+	int val = 0;
+
+	if (!('0' <= *curSequence && *curSequence <= '9')) {
+		*syntaxErr = 1;
+	}
+	assert_syntax(*syntaxErr);
+
+	while ('0' <= *curSequence && *curSequence <= '9') {
+		val = val * 10 + (*curSequence - '0');
+		curSequence++;
+	}
+
+	return val;
+}
+
+
+/**
+*	Создает дерево по выражению
+*
+*	@param[in] expr Выражение
+*
+*	@return Дерево
+*/
+
+tree_t ExprToTree(char* expr, int* syntaxErr) {
+	assert(expr != NULL);
+
+	curSequence = expr;
+	int syntErr = 0;
+	node_t* root = GetG(&syntErr);
+	if (syntaxErr != NULL) {
+		*syntaxErr = syntErr;
+	}
+
+	if (syntErr) {
+		return {};
+	}
+	
+	tree_t tree = TreeRootConstructor(root, "expression_tree");
+
+#ifdef _DEBUG
+	if (TreeOk(&tree)) {
+		PrintTree_OK(tree);
+	}
+	else {
+		PrintTree_NOK(tree);
+	}
+#endif
+
+	return tree;
+}
