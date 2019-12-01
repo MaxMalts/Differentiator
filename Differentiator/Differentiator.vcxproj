@@ -19,8 +19,8 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Diff_tree.cpp" />
     <ClCompile Include="Differentiator.cpp" />
+    <ClCompile Include="Diff_tree.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="diff_tree.h" />

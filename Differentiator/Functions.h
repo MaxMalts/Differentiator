@@ -1,6 +1,6 @@
 #pragma once
 
-DEF_FUNC(sin, 1, {
+DEF_FUNC(sin, 1, 1, {
 		if (*curSequence != '(') {
 			*syntaxErr = 1;
 		}
@@ -19,7 +19,7 @@ DEF_FUNC(sin, 1, {
 		val = sin(arg);
 	})
 
-DEF_FUNC(cos, 1, {
+DEF_FUNC(cos, 1, 2, {
 		if (*curSequence != '(') {
 			*syntaxErr = 1;
 		}
@@ -38,7 +38,7 @@ DEF_FUNC(cos, 1, {
 		val = cos(arg);
 	})
 
-DEF_FUNC(tg, 1, {
+DEF_FUNC(tg, 1, 3, {
 		if (*curSequence != '(') {
 			*syntaxErr = 1;
 		}
@@ -57,7 +57,7 @@ DEF_FUNC(tg, 1, {
 		val = tan(arg);
 	})
 
-DEF_FUNC(ctg, 1, {
+DEF_FUNC(ctg, 1, 4, {
 		if (*curSequence != '(') {
 			*syntaxErr = 1;
 		}
@@ -76,7 +76,7 @@ DEF_FUNC(ctg, 1, {
 		val = 1 / tan(arg);
 	})
 
-DEF_FUNC(arcsin, 1, {
+DEF_FUNC(arcsin, 1, 5, {
 		if (*curSequence != '(') {
 			*syntaxErr = 1;
 		}
@@ -95,7 +95,7 @@ DEF_FUNC(arcsin, 1, {
 		val = asin(arg);
 	})
 
-DEF_FUNC(arccos, 1, {
+DEF_FUNC(arccos, 1, 6, {
 		if (*curSequence != '(') {
 			*syntaxErr = 1;
 		}
@@ -115,7 +115,7 @@ DEF_FUNC(arccos, 1, {
 	})
 
 
-DEF_FUNC(arctg, 1, {
+DEF_FUNC(arctg, 1, 7, {
 		if (*curSequence != '(') {
 			*syntaxErr = 1;
 		}
@@ -135,7 +135,7 @@ DEF_FUNC(arctg, 1, {
 	})
 
 
-DEF_FUNC(arcctg, 1, {
+DEF_FUNC(arcctg, 1, 8, {
 		if (*curSequence != '(') {
 			*syntaxErr = 1;
 		}
@@ -154,7 +154,7 @@ DEF_FUNC(arcctg, 1, {
 		val = atan(1 / arg);
 	})
 
-DEF_FUNC(exp, 1, {
+DEF_FUNC(exp, 1, 9, {
 		if (*curSequence != '(') {
 			*syntaxErr = 1;
 		}
@@ -173,7 +173,7 @@ DEF_FUNC(exp, 1, {
 		val = exp(arg);
 	})
 
-DEF_FUNC(abs, 1, {
+DEF_FUNC(abs, 1, 10, {
 		if (*curSequence != '(') {
 			*syntaxErr = 1;
 		}
@@ -192,7 +192,7 @@ DEF_FUNC(abs, 1, {
 		val = fabs(arg);
 	})
 
-DEF_FUNC(floor, 1, {
+DEF_FUNC(floor, 1, 11, {
 		if (*curSequence != '(') {
 			*syntaxErr = 1;
 		}
@@ -211,7 +211,7 @@ DEF_FUNC(floor, 1, {
 		val = floor(arg);
 	})
 
-DEF_FUNC(sqrt, 1, {
+DEF_FUNC(sqrt, 1, 12, {
 		if (*curSequence != '(') {
 			*syntaxErr = 1;
 		}
@@ -230,7 +230,7 @@ DEF_FUNC(sqrt, 1, {
 		val = floor(arg);
 	})
 
-DEF_FUNC(ln, 1, {
+DEF_FUNC(ln, 1, 13, {
 		if (*curSequence != '(') {
 			*syntaxErr = 1;
 		}
@@ -249,7 +249,7 @@ DEF_FUNC(ln, 1, {
 		val = log(arg);
 	})
 
-DEF_FUNC(lg, 1, {
+DEF_FUNC(lg, 1, 14, {
 		if (*curSequence != '(') {
 			*syntaxErr = 1;
 		}
@@ -268,7 +268,7 @@ DEF_FUNC(lg, 1, {
 		val = log10(arg);
 	})
 
-DEF_FUNC(log, 2, {
+DEF_FUNC(log, 2, 15, {
 		if (*curSequence != '(') {
 			*syntaxErr = 1;
 		}
@@ -296,7 +296,7 @@ DEF_FUNC(log, 2, {
 		val = log(arg2) / log(arg1);
 	})
 
-DEF_FUNC(pow, 2, {
+DEF_FUNC(pow, 2, 16, {
 		if (*curSequence != '(') {
 			*syntaxErr = 1;
 		}

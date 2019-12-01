@@ -13,7 +13,8 @@ enum node_type {
 	num_node,
 	var_node,
 	op_node,
-	func_node
+	func_node,
+	diff_node
 };
 
 struct node_t {
@@ -40,6 +41,30 @@ struct tree_t {
 #endif
 };
 
+
+
+#ifdef _DEBUG
+#define PrintTree_OK(tree) TreeDump(&tree, __FILE__, __LINE__, __FUNCTION__, "just looking");
+#define PrintTree_NOK(tree) TreeDump(&tree, __FILE__, __LINE__, __FUNCTION__, "tree has an error");
+#else
+#define PrintTree_OK(tree) ;
+#define PrintTree_NOK(tree) ;
+#endif
+
+
+/**
+*	Выводит информацию о дереве. Для визуализации дерева, используйте ShowTree().
+*
+*	@param[in] tree Дерево
+*	@param[in] file Название файла, окуда вызвали функцию
+*	@param[in] line Номер строки, из которой вызвали функцию
+*	@param[in] function Имя функции, из которой вызвали функцию
+*	@param[in] reason Причина, по которой вызвали функцию
+*/
+
+#ifdef _DEBUG
+void TreeDump(tree_t* tree, const char* file, const int line, const char* function, const char* reason);
+#endif
 
 
 /**
@@ -126,6 +151,18 @@ tree_t TreeConstructor(const char* name);
 
 
 /**
+*	Создает новое дерево с заданным корнем
+*
+*	@param[in] root Корень
+*	@param[in] name Имя дерева
+*
+*	@return Созданное дерево
+*/
+
+tree_t TreeRootConstructor(node_t* root, const char* name);
+
+
+/**
 *	Перезаписывает значение узла
 *
 *	@param node Узел
@@ -147,6 +184,36 @@ int ChangeNodeValue(node_t* node, value_t value);
 */
 
 int GetNodeValue(node_t* node, value_t* value);
+
+
+/**
+*	Создает новый узел
+*
+*	@return Указатель на новый узел. Не забудьте освободить память по этому указателю!
+*/
+
+node_t* CreateNode();
+
+
+/*  Не для пользователя
+*	Создает новый узел с заполненными полями
+*
+*	@return Указатель на новый узел. Не забудьте освободить память по этому указателю!
+*/
+
+node_t* CreateNodeProp(node_t* parent, value_t value, node_type type, node_t* left, node_t* right);
+
+
+/**
+*	Клонирует узел и все его дочерние узлы
+*
+*	@param[in] srcNode Исходный узел
+*
+*	@return Указатель на новый узел (поле parnt останется таким же, как у исходного).\
+ Не забудьте освободить память по этому указателю!
+*/
+
+node_t* CloneNodes(node_t* srcNode);
 
 
 /**
@@ -322,14 +389,3 @@ tree_t CodeToTree(char* code, const char* treeName="tree_from_code", int* err = 
 */
 
 char* FindNodeByValue(tree_t* tree, value_t* value, node_t*& foundNode, int* err = NULL);
-
-
-/**
-*	Создает дерево по выражению
-*
-*	@param[in] expr Выражение
-*
-*	@return Дерево
-*/
-
-tree_t ExprToTree(char* expr, int* syntaxErr = NULL);
