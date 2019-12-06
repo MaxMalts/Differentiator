@@ -793,6 +793,37 @@ node_t* CloneNodes(node_t* srcNode) {
 	return dstNode;
 }
 
+
+/**
+*	Обновляет сына с соответствующей стороны
+*
+*	@param[in] oldChild Старый сын, родителя которого нужно обновить
+*	@param[in] child Новый сын
+*
+*	@return 1 - ошибка; 0 - все прошло нормально
+*/
+
+int UpdateParentChild(node_t* oldChild, node_t* newChild) {
+	assert(oldChild != NULL);
+
+	if (oldChild->parent != NULL) {
+		if (oldChild->parent->left == oldChild) {
+			oldChild->parent->left = newChild;
+		}
+		else if (oldChild->parent->right == oldChild) {
+			oldChild->parent->right = newChild;
+		}
+		else {
+			return 1;
+		}
+	}
+	else {
+		return 1;
+	}
+
+	return 0;
+}
+
 /**
 *	Добавляет узел с указанной стороны по значению
 *
@@ -1046,7 +1077,7 @@ int AddSubtree(tree_t* tree, tree_t* subtree, node_t* node, const int side) {
 *	@return Количество удаленных узлов
 */
 
-int DeleteNodes(node_t* node, int count = 0) {
+int DeleteNodes(node_t* node, int count) {
 	assert(node != NULL);
 	assert(count >= 0);
 

@@ -227,6 +227,18 @@ node_t* CloneNodes(node_t* srcNode);
 
 
 /**
+*	Обновляет сына с соответствующей стороны
+*
+*	@param[in] oldChild Старый сын, родителя которого нужно обновить
+*	@param[in] child Новый сын
+*
+*	@return 1 - ошибка; 0 - все прошло нормально
+*/
+
+int UpdateParentChild(node_t* oldChild, node_t* newChild);
+
+
+/**
 *	Добавляет узел с указанной стороны по значению
 *
 *	@param tree Дерево, в котором находится узел
@@ -256,6 +268,19 @@ int AddChild(tree_t* tree, node_t* node, value_t elem, const int side, node_t** 
 */
 
 int DeleteChild(tree_t* tree, node_t* node, const int side);
+
+
+/**
+*	Удаляет все дочерние узлы и сам узел
+*
+*	@param Узел
+*	@param[in] count Количество уже удаленных узлов\
+ (при первичном вызове опустить, переменная только для рекурсивного вызова)
+*
+*	@return Количество удаленных узлов
+*/
+
+int DeleteNodes(node_t* node, int count = 0);
 
 
 /**

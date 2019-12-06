@@ -4,7 +4,11 @@
 #include <ctype.h>
 #include "diff_tree.h"
 #include "buffer.h"
-#include "FUnctions_enum.h"
+#include "Functions_enum.h"
+#include "DSL.h"
+
+
+void DifferentiateNode(node_t*& curNode);
 
 
 /**
@@ -463,7 +467,16 @@ tree_t ExprToTree(char* expr, int* syntaxErr = NULL) {
 }
 
 
-void DifferentiateNode(node_t* curNode) {
+node_t* DSLDiffNode(node_t* node) {
+	assert(node != NULL);
+
+	DifferentiateNode(node);
+
+	return node;
+}
+
+
+void DifferentiateNode(node_t*& curNode) {
 	assert(curNode != NULL);
 
 	switch (curNode->type) {
@@ -486,7 +499,17 @@ void DifferentiateNode(node_t* curNode) {
 			DifferentiateNode(curNode->right);
 			break;
 		case '*': {
-			curNode->value[0] = '+';
+
+			node_t* newNode = PLUS(curNode->parent, NULL, NULL);
+			newNode->left = MUL(newNode, DIFF(CLONE(curNode->left)), CLONE(curNode->right));
+			newNode->right = MUL(newNode, CLONE(curNode->left), DIFF(CLONE(curNode->right)));
+
+			UpdateParentChild(curNode, newNode);
+			DeleteNodes(curNode);
+			curNode = newNode;
+
+
+			/*curNode->value[0] = '+';
 
 			node_t* leftOld = curNode->left;
 			node_t* rightOld = curNode->right;
@@ -498,7 +521,7 @@ void DifferentiateNode(node_t* curNode) {
 			curNode->right = rightNew;
 
 			DifferentiateNode(leftNew->left);
-			DifferentiateNode(rightNew->right);
+			DifferentiateNode(rightNew->right);*/
 			break;
 		}
 		case '/': {
@@ -567,7 +590,7 @@ void Differentiate(tree_t* exprTree) {
 
 int main() {
 	//char expr[] = "3/sin(x)*pow(4/12,x*2+1)+5*x";
-	char expr[] = "sin(x)";
+	char expr[] = "3*x";
 
 	int syntaxErr = 0;
 	tree_t diffTree = ExprToTree(expr, &syntaxErr);
