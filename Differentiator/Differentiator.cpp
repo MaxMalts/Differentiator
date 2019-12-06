@@ -508,40 +508,20 @@ void DifferentiateNode(node_t*& curNode) {
 			DeleteNodes(curNode);
 			curNode = newNode;
 
-
-			/*curNode->value[0] = '+';
-
-			node_t* leftOld = curNode->left;
-			node_t* rightOld = curNode->right;
-
-			node_t* leftNew = CreateNodeProp(curNode, op_node, (char*)"*", leftOld, rightOld);
-			node_t* rightNew = CreateNodeProp(curNode, op_node, (char*)"*", CloneNodes(leftOld), CloneNodes(rightOld));
-
-			curNode->left = leftNew;
-			curNode->right = rightNew;
-
-			DifferentiateNode(leftNew->left);
-			DifferentiateNode(rightNew->right);*/
 			break;
 		}
 		case '/': {
-			curNode->value[0] = '/';
 
-			node_t* leftOld = curNode->left;
-			node_t* rightOld = curNode->right;
+			node_t* newNode = DIV(curNode->parent, NULL, NULL);
+				newNode->left = MINUS(newNode, NULL, NULL);
+					newNode->left->left = MUL(newNode->left, DIFF(CLONE(curNode->left)), CLONE(curNode->right));
+					newNode->left->right = MUL(newNode->left, CLONE(curNode->left), DIFF(CLONE(curNode->right)));
+				newNode->right = MUL(newNode, CLONE(curNode->right), CLONE(curNode->right));
 
-			node_t* minusLeft = CreateNodeProp(NULL, op_node, (char*)"*", leftOld, rightOld);
-			node_t* minusRight = CreateNodeProp(NULL, op_node, (char*)"*", CloneNodes(leftOld), CloneNodes(rightOld));
+			UpdateParentChild(curNode, newNode);
+			DeleteNodes(curNode);
+			curNode = newNode;
 
-			node_t* leftNew = CreateNodeProp(curNode, op_node, (char*)"-", minusLeft, minusRight);
-
-			node_t* rightNew = CreateNodeProp(curNode, op_node, (char*)"*", CloneNodes(rightOld), CloneNodes(rightOld));
-
-			curNode->left = leftNew;
-			curNode->right = rightNew;
-
-			DifferentiateNode(minusLeft->left);
-			DifferentiateNode(minusRight->right);
 			break;
 		}
 		default:
@@ -590,7 +570,7 @@ void Differentiate(tree_t* exprTree) {
 
 int main() {
 	//char expr[] = "3/sin(x)*pow(4/12,x*2+1)+5*x";
-	char expr[] = "3*x";
+	char expr[] = "3*x*x";
 
 	int syntaxErr = 0;
 	tree_t diffTree = ExprToTree(expr, &syntaxErr);
