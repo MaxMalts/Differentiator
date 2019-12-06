@@ -1,3 +1,5 @@
+#pragma once
+
 enum functions_ints {
 	sin_funcI = 1,
 	cos_funcI,
