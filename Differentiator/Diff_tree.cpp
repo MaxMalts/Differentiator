@@ -259,6 +259,9 @@ int NodesOutput(FILE* gvFile, node_t* node) {
 		memcpy((char*)&num, node->value, sizeof(float));
 		sprintf(valueS, "%f", num);
 	}
+	else if (node->type == func_node) {
+		itoa(node->value[0], valueS, 10);
+	}
 	else {
 		strcpy(valueS, Value_tToStr(node->value));
 	}

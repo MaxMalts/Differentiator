@@ -14,7 +14,6 @@ enum node_type {
 	var_node,
 	op_node,
 	func_node,
-	diff_node
 };
 
 struct node_t {

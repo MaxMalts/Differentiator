@@ -24,7 +24,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="diff_tree.h" />
-    <ClInclude Include="Functions.h" />
+    <ClInclude Include="functions.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

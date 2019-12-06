@@ -243,11 +243,14 @@ node_t* GetFunc(int* syntaxErr) {
 	assert(syntaxErr != NULL);
 
 	node_t* res = NULL;
+	int found = 0;
 
 #define DEF_FUNC(str, NParams, funcI) \
 	                                                               \
-	else if (strncmp(curSequence, #str, sizeof(#str) - 1) == 0) {  \
+	if (!found && strncmp(curSequence, #str, sizeof(#str) - 1) == 0) {  \
 		assert(NParams == 1 || NParams == 2);                      \
+	                                                               \
+		found = 1;                                                 \
 		                                                           \
 		curSequence = curSequence + sizeof(#str) - 1;              \
 		if (*curSequence != '(') {                                 \
@@ -291,9 +294,8 @@ node_t* GetFunc(int* syntaxErr) {
 		curSequence++;                                             \
 	}
 
-	if (0) {}
-#include "Functions.h"
-	else {
+#include "functions.h"
+	if (!found) {
 		*syntaxErr = 1;
 	}
 	assert_syntax(*syntaxErr);
@@ -476,7 +478,7 @@ void DifferentiateNode(node_t* curNode) {
 		memcpy(curNode->value, &newNum, sizeof(float));
 		break;
 	}
-	case op_node:
+	case op_node: {
 		switch (curNode->value[0]) {
 		case '+':
 		case '-':
@@ -519,7 +521,28 @@ void DifferentiateNode(node_t* curNode) {
 			DifferentiateNode(minusRight->right);
 			break;
 		}
+		default:
+			assert(0);
 		}
+		break;
+	}
+	case func_node: {
+
+#define DEF_FUNC(str, NParams, funcI, code) \
+	case (funcI): {                                 \
+		code                                        \
+		break;                                      \
+	}
+
+		switch (curNode->value[0]) {
+#include "functions.h"
+		default:
+			assert(0);
+		}
+#undef DEF_FUNC
+
+		break;
+	}
 	}
 }
 
@@ -544,7 +567,7 @@ void Differentiate(tree_t* exprTree) {
 
 int main() {
 	//char expr[] = "3/sin(x)*pow(4/12,x*2+1)+5*x";
-	char expr[] = "1/x*2";
+	char expr[] = "sin(x)";
 
 	int syntaxErr = 0;
 	tree_t diffTree = ExprToTree(expr, &syntaxErr);
