@@ -24,7 +24,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="diff_tree.h" />
+    <ClInclude Include="DSL.h" />
     <ClInclude Include="functions.h" />
+    <ClInclude Include="Functions_enum.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

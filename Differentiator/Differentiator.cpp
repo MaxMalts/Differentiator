@@ -4,6 +4,7 @@
 #include <ctype.h>
 #include "diff_tree.h"
 #include "buffer.h"
+#include "FUnctions_enum.h"
 
 
 /**
@@ -243,14 +244,12 @@ node_t* GetFunc(int* syntaxErr) {
 	assert(syntaxErr != NULL);
 
 	node_t* res = NULL;
-	int found = 0;
+	//int found = 0;
 
 #define DEF_FUNC(str, NParams, funcI) \
 	                                                               \
-	if (!found && strncmp(curSequence, #str, sizeof(#str) - 1) == 0) {  \
+	else if (strncmp(curSequence, #str, sizeof(#str) - 1) == 0) {  \
 		assert(NParams == 1 || NParams == 2);                      \
-	                                                               \
-		found = 1;                                                 \
 		                                                           \
 		curSequence = curSequence + sizeof(#str) - 1;              \
 		if (*curSequence != '(') {                                 \
@@ -294,8 +293,9 @@ node_t* GetFunc(int* syntaxErr) {
 		curSequence++;                                             \
 	}
 
+	if (0) {}
 #include "functions.h"
-	if (!found) {
+	else {
 		*syntaxErr = 1;
 	}
 	assert_syntax(*syntaxErr);
