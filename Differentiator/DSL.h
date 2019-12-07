@@ -3,6 +3,38 @@
 #include "Functions_enum.h"
 
 
+/**
+*	Записывает число типа float в value_t как оно записано в памяти
+*
+*	@param[in] num Число
+*
+*	@return Указатель на value_t
+*/
+
+value_t* FloatToValue_t(float num) {
+	static value_t res = {};
+	memcpy(res, &num, sizeof(float));
+
+	return &res;
+}
+
+
+/**
+*	Записывает символ в value_t
+*
+*	@param[in] ch Символ
+*
+*	@return Указатель на value_t
+*/
+
+value_t* CharToValue_t(char ch) {
+	static value_t res = {};
+	res[0] = ch;
+	res[1] = 0;
+
+	return &res;
+}
+
 
 
 #define DIFF(node)\
@@ -15,61 +47,61 @@
 	CreateNodeProp(parent, num_node, *FloatToValue_t(num), left, right)
 
 #define PLUS(parent, left, right)\
-	CreateNodeProp(parent, op_node, (value_t)"+", left, right)
+	CreateNodeProp(parent, op_node, *CharToValue_t('+'), left, right)
 
 #define MINUS(parent, left, right)\
-	CreateNodeProp(parent, op_node, (char*)"-", left, right)
+	CreateNodeProp(parent, op_node, *CharToValue_t('-'), left, right)
 
 #define MUL(parent, left, right)\
-	CreateNodeProp(parent, op_node, (char*)"*", left, right)
+	CreateNodeProp(parent, op_node, *CharToValue_t('*'), left, right)
 
 #define DIV(parent, left, right)\
-	CreateNodeProp(parent, op_node, (char*)"/", left, right)
+	CreateNodeProp(parent, op_node, *CharToValue_t('/'), left, right)
 
 #define SIN(parent, left)\
-	CreateNodeProp(parent, func_node, , left, NULL)
+	CreateNodeProp(parent, func_node, *CharToValue_t(sin_funcI), left, NULL)
 
 #define COS(parent, left)\
-	CreateNodeProp(parent, func_node, cos_funcI, left, NULL)
+	CreateNodeProp(parent, func_node, *CharToValue_t(cos_funcI), left, NULL)
 
 #define TG(parent, left)\
-	CreateNodeProp(parent, func_node, tg_funcI, left, NULL)
+	CreateNodeProp(parent, func_node, *CharToValue_t(tg_funcI), left, NULL)
 
 #define CTG(parent, left)\
-	CreateNodeProp(parent, func_node, ctg_funcI, left, NULL)
+	CreateNodeProp(parent, func_node, *CharToValue_t(ctg_funcI), left, NULL)
 
 #define ARCSIN(parent, left)\
-	CreateNodeProp(parent, func_node, arcsin_funcI, left, NULL)
+	CreateNodeProp(parent, func_node, *CharToValue_t(arcsin_funcI), left, NULL)
 
 #define ARCCOS(parent, left)\
-	CreateNodeProp(parent, func_node, arccos_funcI, left, NULL)
+	CreateNodeProp(parent, func_node, *CharToValue_t(arccos_funcI), left, NULL)
 
 #define ARCTG(parent, left)\
-	CreateNodeProp(parent, func_node, arctg_funcI, left, NULL)
+	CreateNodeProp(parent, func_node, *CharToValue_t(arctg_funcI), left, NULL)
 
 #define ARCCTG(parent, left)\
-	CreateNodeProp(parent, func_node, arcctg_funcI, left, NULL)
+	CreateNodeProp(parent, func_node, *CharToValue_t(arcctg_funcI), left, NULL)
 
 #define EXP(parent, left)\
-	CreateNodeProp(parent, func_node, exp_funcI, left, NULL)
+	CreateNodeProp(parent, func_node, *CharToValue_t(exp_funcI), left, NULL)
 
 #define ABS(parent, left)\
-	CreateNodeProp(parent, func_node, abs_funcI, left, NULL)
+	CreateNodeProp(parent, func_node, *CharToValue_t(abs_funcI), left, NULL)
 
 #define FLOOR(parent, left)\
-	CreateNodeProp(parent, func_node, floor_funcI, left, NULL)
+	CreateNodeProp(parent, func_node, *CharToValue_t(floor_funcI), left, NULL)
 
 #define SQRT(parent, left)\
-	CreateNodeProp(parent, func_node, sqrt_funcI, left, NULL)
+	CreateNodeProp(parent, func_node, *CharToValue_t(sqrt_funcI), left, NULL)
 
 #define LN(parent, left)\
-	CreateNodeProp(parent, func_node, ln_funcI, left, NULL)
+	CreateNodeProp(parent, func_node, *CharToValue_t(ln_funcI), left, NULL)
 
 #define LG(parent, left)\
-	CreateNodeProp(parent, func_node, lg_funcI, left, NULL)
+	CreateNodeProp(parent, func_node, *CharToValue_t(lg_funcI), left, NULL)
 
 #define LOG(parent, left, right)\
-	CreateNodeProp(parent, func_node, log_funcI, left, right)
+	CreateNodeProp(parent, func_node, *CharToValue_t(log_funcI), left, right)
 
 #define POW(parent, left, right)\
-	CreateNodeProp(parent, func_node, pow_funcI, left, right)
+	CreateNodeProp(parent, func_node, *CharToValue_t(pow_funcI), left, right)

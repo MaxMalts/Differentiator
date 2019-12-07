@@ -87,22 +87,6 @@ char* Value_tToStr(const value_t value) {
 
 
 /**
-*	Записывает число типа float в value_t как оно записано в памяти
-*
-*	@param[in] num Число
-*
-*	@return Указатель на value_t
-*/
-
-value_t* FloatToValue_t(float num) {
-	value_t res = {};
-	memcpy(res, &num, sizeof(float));
-
-	return &res;
-}
-
-
-/**
 *	Сравнивает значения value_t
 *
 *	@param[in] value1 Первое значение
