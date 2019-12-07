@@ -43,8 +43,8 @@ value_t* CharToValue_t(char ch) {
 #define CLONE(node)\
 	CloneNodes(node)
 
-#define NUM(parent, num, left, right)\
-	CreateNodeProp(parent, num_node, *FloatToValue_t(num), left, right)
+#define NUM(parent, num)\
+	CreateNodeProp(parent, num_node, *FloatToValue_t(num), NULL, NULL)
 
 #define PLUS(parent, left, right)\
 	CreateNodeProp(parent, op_node, *CharToValue_t('+'), left, right)

@@ -485,14 +485,14 @@ void DifferentiateNode(node_t*& curNode) {
 	case num_node: {
 		assert(NodeChildsCount(curNode) == 0);
 
-		newNode = NUM(curNode->parent, 0, NULL, NULL);
+		newNode = NUM(curNode->parent, 0);
 
 		break;
 	}
 	case var_node: {
 		assert(NodeChildsCount(curNode) == 0);
 
-		newNode = NUM(curNode->parent, 1, NULL, NULL);
+		newNode = NUM(curNode->parent, 1);
 
 		break;
 	}
@@ -577,7 +577,7 @@ void Differentiate(tree_t* exprTree) {
 
 int main() {
 	//char expr[] = "3/sin(x)*pow(4/12,x*2+1)+5*x";
-	char expr[] = "arcctg(x*x)";
+	char expr[] = "pow(x,x)";
 
 	int syntaxErr = 0;
 	tree_t diffTree = ExprToTree(expr, &syntaxErr);
