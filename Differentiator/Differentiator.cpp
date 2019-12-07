@@ -577,7 +577,7 @@ void Differentiate(tree_t* exprTree) {
 
 int main() {
 	//char expr[] = "3/sin(x)*pow(4/12,x*2+1)+5*x";
-	char expr[] = "sin(sin(x+x))";
+	char expr[] = "arcctg(x*x)";
 
 	int syntaxErr = 0;
 	tree_t diffTree = ExprToTree(expr, &syntaxErr);

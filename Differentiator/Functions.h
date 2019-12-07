@@ -42,6 +42,15 @@ DEF_FUNC(sin, 1, sin_funcI, {
 	})
 
 DEF_FUNC(cos, 1, cos_funcI, {
+
+	assert(curNode->right == NULL);
+	assert(curNode->left != NULL);
+
+	newNode = MUL(curNode->parent, NULL, DIFF(CLONE(curNode->left)));
+		newNode->left = MUL(newNode, NULL, NULL);
+			newNode->left->left = NUM(newNode->left, -1, NULL, NULL);
+			newNode->left->right = COS(newNode->left, CLONE(curNode->left), NULL);
+
 	/*assert(curNode->right == NULL);
 	assert(curNode->left != NULL);
 
@@ -80,7 +89,19 @@ DEF_FUNC(cos, 1, cos_funcI, {
 		val = cos(arg);*/
 	})
 
-//DEF_FUNC(tg, 1, tg_funcI, {
+DEF_FUNC(tg, 1, tg_funcI, {
+
+	assert(curNode->right == NULL);
+	assert(curNode->left != NULL);
+
+	newNode = MUL(curNode->parent, NULL, DIFF(CLONE(curNode->left)));
+		newNode->left = DIV(newNode, NULL, NULL);
+			newNode->left->left = NUM(newNode->left, 1, NULL, NULL);
+			newNode->left->right = MUL(newNode->left, NULL, NULL);
+				newNode->left->right->left = COS(newNode->left->right, CLONE(curNode->left));
+				newNode->left->right->right = COS(newNode->left->right, CLONE(curNode->left));
+
+
 //		if (*curSequence != '(') {
 //			*syntaxErr = 1;
 //		}
@@ -97,9 +118,21 @@ DEF_FUNC(cos, 1, cos_funcI, {
 //		curSequence++;
 //
 //		val = tan(arg);
-//	})
-//
-//DEF_FUNC(ctg, 1, ctg_funcI, {
+	})
+
+DEF_FUNC(ctg, 1, ctg_funcI, {
+
+	assert(curNode->right == NULL);
+	assert(curNode->left != NULL);
+
+	newNode = MUL(curNode->parent, NULL, DIFF(CLONE(curNode->left)));
+		newNode->left = DIV(newNode, NULL, NULL);
+			newNode->left->left = NUM(newNode->left, -1, NULL, NULL);
+			newNode->left->right = MUL(newNode->left, NULL, NULL);
+				newNode->left->right->left = SIN(newNode->left->right, CLONE(curNode->left));
+				newNode->left->right->right = SIN(newNode->left->right, CLONE(curNode->left));
+
+
 //		if (*curSequence != '(') {
 //			*syntaxErr = 1;
 //		}
@@ -116,9 +149,22 @@ DEF_FUNC(cos, 1, cos_funcI, {
 //		curSequence++;
 //
 //		val = 1 / tan(arg);
-//	})
-//
-//DEF_FUNC(arcsin, 1, arcsin_funcI, {
+	})
+
+DEF_FUNC(arcsin, 1, arcsin_funcI, {
+
+	assert(curNode->right == NULL);
+	assert(curNode->left != NULL);
+
+	newNode = MUL(curNode->parent, NULL, DIFF(CLONE(curNode->left)));
+		newNode->left = DIV(newNode, NULL, NULL);
+			newNode->left->left = NUM(newNode->left, 1, NULL, NULL);
+			newNode->left->right = SQRT(newNode->left, NULL, NULL);
+				newNode->left->right->left = MINUS(newNode->left->right, NULL, NULL);
+					newNode->left->right->left->left = NUM(newNode->left->right->left, 1, NULL, NULL);
+					newNode->left->right->left->right = MUL(newNode->left->right->left, CLONE(curNode->left), CLONE(curNode->left));
+
+
 //		if (*curSequence != '(') {
 //			*syntaxErr = 1;
 //		}
@@ -135,9 +181,21 @@ DEF_FUNC(cos, 1, cos_funcI, {
 //		curSequence++;
 //
 //		val = asin(arg);
-//	})
-//
-//DEF_FUNC(arccos, 1, arccos_funcI, {
+	})
+
+DEF_FUNC(arccos, 1, arccos_funcI, {
+
+	assert(curNode->right == NULL);
+	assert(curNode->left != NULL);
+
+	newNode = MUL(curNode->parent, NULL, DIFF(CLONE(curNode->left)));
+		newNode->left = DIV(newNode, NULL, NULL);
+			newNode->left->left = NUM(newNode->left, -1, NULL, NULL);
+			newNode->left->right = SQRT(newNode->left, NULL, NULL);
+				newNode->left->right->left = MINUS(newNode->left->right, NULL, NULL);
+					newNode->left->right->left->left = NUM(newNode->left->right->left, 1, NULL, NULL);
+					newNode->left->right->left->right = MUL(newNode->left->right->left, CLONE(curNode->left), CLONE(curNode->left));
+
 //		if (*curSequence != '(') {
 //			*syntaxErr = 1;
 //		}
@@ -154,10 +212,20 @@ DEF_FUNC(cos, 1, cos_funcI, {
 //		curSequence++;
 //
 //		val = acos(arg);
-//	})
-//
-//
-//DEF_FUNC(arctg, 1, arctg_funcI, {
+	})
+
+DEF_FUNC(arctg, 1, arctg_funcI, {
+
+	assert(curNode->right == NULL);
+	assert(curNode->left != NULL);
+
+	newNode = MUL(curNode->parent, NULL, DIFF(CLONE(curNode->left)));
+		newNode->left = DIV(newNode, NULL, NULL);
+			newNode->left->left = NUM(newNode->left, 1, NULL, NULL);
+			newNode->left->right = PLUS(newNode->left, NULL, NULL);
+				newNode->left->right->left = NUM(newNode->left->right, 1, NULL, NULL);
+				newNode->left->right->right = MUL(newNode->left->right, CLONE(curNode->left), CLONE(curNode->left));
+
 //		if (*curSequence != '(') {
 //			*syntaxErr = 1;
 //		}
@@ -174,10 +242,20 @@ DEF_FUNC(cos, 1, cos_funcI, {
 //		curSequence++;
 //
 //		val = atan(arg);
-//	})
-//
-//
-//DEF_FUNC(arcctg, 1, arcctg_funcI, {
+	})
+
+DEF_FUNC(arcctg, 1, arcctg_funcI, {
+
+	assert(curNode->right == NULL);
+	assert(curNode->left != NULL);
+
+	newNode = MUL(curNode->parent, NULL, DIFF(CLONE(curNode->left)));
+		newNode->left = DIV(newNode, NULL, NULL);
+			newNode->left->left = NUM(newNode->left, -1, NULL, NULL);
+			newNode->left->right = PLUS(newNode->left, NULL, NULL);
+				newNode->left->right->left = NUM(newNode->left->right, 1, NULL, NULL);
+				newNode->left->right->right = MUL(newNode->left->right, CLONE(curNode->left), CLONE(curNode->left));
+
 //		if (*curSequence != '(') {
 //			*syntaxErr = 1;
 //		}
@@ -194,9 +272,16 @@ DEF_FUNC(cos, 1, cos_funcI, {
 //		curSequence++;
 //
 //		val = atan(1 / arg);
-//	})
-//
-//DEF_FUNC(exp, 1, exp_funcI, {
+	})
+
+DEF_FUNC(exp, 1, exp_funcI, {
+
+	assert(curNode->right == NULL);
+	assert(curNode->left != NULL);
+
+	newNode = MUL(curNode->parent, NULL, DIFF(CLONE(curNode->left)));
+		newNode->left = EXP(newNode, CLONE(curNode->left), NULL);
+
 //		if (*curSequence != '(') {
 //			*syntaxErr = 1;
 //		}
@@ -213,9 +298,12 @@ DEF_FUNC(cos, 1, cos_funcI, {
 //		curSequence++;
 //
 //		val = exp(arg);
-//	})
-//
-//DEF_FUNC(abs, 1, abs_funcI, {
+	})
+
+DEF_FUNC(abs, 1, abs_funcI, {
+
+
+
 //		if (*curSequence != '(') {
 //			*syntaxErr = 1;
 //		}
@@ -232,7 +320,7 @@ DEF_FUNC(cos, 1, cos_funcI, {
 //		curSequence++;
 //
 //		val = fabs(arg);
-//	})
+	})
 //
 //DEF_FUNC(floor, 1, floor_funcI, {
 //		if (*curSequence != '(') {
