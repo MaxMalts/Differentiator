@@ -3,12 +3,8 @@ DEF_FUNC(sin, 1, sin_funcI, {
 	assert(curNode->right == NULL);
 	assert(curNode->left != NULL);
 
-	node_t* newNode = MUL(curNode->parent, NULL, DIFF(CLONE(curNode->left)));
+	newNode = MUL(curNode->parent, NULL, DIFF(CLONE(curNode->left)));
 		newNode->left = COS(newNode, CLONE(curNode->left), NULL);
-
-	UpdateParentChild(curNode, newNode);
-	DeleteNodes(curNode);
-	curNode = newNode;
 
 	/*assert(curNode->right == NULL);
 	assert(curNode->left != NULL);

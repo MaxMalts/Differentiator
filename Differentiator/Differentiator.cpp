@@ -479,51 +479,54 @@ node_t* DSLDiffNode(node_t* node) {
 void DifferentiateNode(node_t*& curNode) {
 	assert(curNode != NULL);
 
+	node_t* newNode = NULL;
+
 	switch (curNode->type) {
 	case num_node: {
-		float newNum = 0;
-		memcpy(curNode->value, &newNum, sizeof(float));
+		assert(NodeChildsCount(curNode) == 0);
+
+		newNode = NUM(curNode->parent, 0, NULL, NULL);
+
 		break;
 	}
 	case var_node: {
-		curNode->type = num_node;
-		float newNum = 1;
-		memcpy(curNode->value, &newNum, sizeof(float));
+		assert(NodeChildsCount(curNode) == 0);
+
+		newNode = NUM(curNode->parent, 1, NULL, NULL);
+
 		break;
 	}
 	case op_node: {
+		assert(NodeChildsCount(curNode) == 2);
+
 		switch (curNode->value[0]) {
-		case '+':
-		case '-':
-			DifferentiateNode(curNode->left);
-			DifferentiateNode(curNode->right);
-			break;
-		case '*': {
-
-			node_t* newNode = PLUS(curNode->parent, NULL, NULL);
-			newNode->left = MUL(newNode, DIFF(CLONE(curNode->left)), CLONE(curNode->right));
-			newNode->right = MUL(newNode, CLONE(curNode->left), DIFF(CLONE(curNode->right)));
-
-			UpdateParentChild(curNode, newNode);
-			DeleteNodes(curNode);
-			curNode = newNode;
-
+		case '+': {
+			newNode = PLUS(curNode->parent, DIFF(CLONE(curNode->left)), DIFF(CLONE(curNode->right)));
 			break;
 		}
-		case '/': {
 
+		case '-': {
+			newNode = MINUS(curNode->parent, DIFF(CLONE(curNode->left)), DIFF(CLONE(curNode->right)));
+			break;
+		}
+
+		case '*': {
+			newNode = PLUS(curNode->parent, NULL, NULL);
+			newNode->left = MUL(newNode, DIFF(CLONE(curNode->left)), CLONE(curNode->right));
+			newNode->right = MUL(newNode, CLONE(curNode->left), DIFF(CLONE(curNode->right)));
+			break;
+		}
+
+		case '/': {
 			node_t* newNode = DIV(curNode->parent, NULL, NULL);
 				newNode->left = MINUS(newNode, NULL, NULL);
 					newNode->left->left = MUL(newNode->left, DIFF(CLONE(curNode->left)), CLONE(curNode->right));
 					newNode->left->right = MUL(newNode->left, CLONE(curNode->left), DIFF(CLONE(curNode->right)));
 				newNode->right = MUL(newNode, CLONE(curNode->right), CLONE(curNode->right));
 
-			UpdateParentChild(curNode, newNode);
-			DeleteNodes(curNode);
-			curNode = newNode;
-
 			break;
 		}
+
 		default:
 			assert(0);
 		}
@@ -547,6 +550,10 @@ void DifferentiateNode(node_t*& curNode) {
 		break;
 	}
 	}
+
+	UpdateParentChild(curNode, newNode);
+	DeleteNodes(curNode);
+	curNode = newNode;
 }
 
 void Differentiate(tree_t* exprTree) {
@@ -570,7 +577,7 @@ void Differentiate(tree_t* exprTree) {
 
 int main() {
 	//char expr[] = "3/sin(x)*pow(4/12,x*2+1)+5*x";
-	char expr[] = "3*x*x";
+	char expr[] = "sin(sin(x+x))";
 
 	int syntaxErr = 0;
 	tree_t diffTree = ExprToTree(expr, &syntaxErr);
