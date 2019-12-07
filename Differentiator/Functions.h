@@ -1,5 +1,16 @@
 DEF_FUNC(sin, 1, sin_funcI, {
+
 	assert(curNode->right == NULL);
+	assert(curNode->left != NULL);
+
+	node_t* newNode = MUL(newNode->parent, NULL, DIFF(CLONE(curNode->left)));
+		newNode->left = COS(newNode, CLONE(curNode->left), NULL);
+
+	UpdateParentChild(curNode, newNode);
+	DeleteNodes(curNode);
+	curNode = newNode;
+
+	/*assert(curNode->right == NULL);
 	assert(curNode->left != NULL);
 
 	node_t* leftOld = curNode->left;
@@ -14,7 +25,7 @@ DEF_FUNC(sin, 1, sin_funcI, {
 	curNode->left = leftNew;
 	curNode->right = rightNew;
 	
-	DifferentiateNode(curNode->right);
+	DifferentiateNode(curNode->right);*/
 
 		/*if (*curSequence != '(') {
 			*syntaxErr = 1;

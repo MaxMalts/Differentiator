@@ -3,14 +3,19 @@
 #include "Functions_enum.h"
 
 
+
+
 #define DIFF(node)\
 	DSLDiffNode(node)
 
 #define CLONE(node)\
 	CloneNodes(node)
 
+#define NUM(parent, num, left, right)\
+	CreateNodeProp(parent, num_node, *FloatToValue_t(num), left, right)
+
 #define PLUS(parent, left, right)\
-	CreateNodeProp(parent, op_node, (char*)"+", left, right)
+	CreateNodeProp(parent, op_node, (value_t)"+", left, right)
 
 #define MINUS(parent, left, right)\
 	CreateNodeProp(parent, op_node, (char*)"-", left, right)
@@ -22,7 +27,7 @@
 	CreateNodeProp(parent, op_node, (char*)"/", left, right)
 
 #define SIN(parent, left)\
-	CreateNodeProp(parent, func_node, sin_funcI, left, NULL)
+	CreateNodeProp(parent, func_node, , left, NULL)
 
 #define COS(parent, left)\
 	CreateNodeProp(parent, func_node, cos_funcI, left, NULL)
