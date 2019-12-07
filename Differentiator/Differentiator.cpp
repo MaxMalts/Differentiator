@@ -518,12 +518,11 @@ void DifferentiateNode(node_t*& curNode) {
 		}
 
 		case '/': {
-			node_t* newNode = DIV(curNode->parent, NULL, NULL);
+			newNode = DIV(curNode->parent, NULL, NULL);
 				newNode->left = MINUS(newNode, NULL, NULL);
 					newNode->left->left = MUL(newNode->left, DIFF(CLONE(curNode->left)), CLONE(curNode->right));
 					newNode->left->right = MUL(newNode->left, CLONE(curNode->left), DIFF(CLONE(curNode->right)));
 				newNode->right = MUL(newNode, CLONE(curNode->right), CLONE(curNode->right));
-
 			break;
 		}
 
@@ -576,8 +575,9 @@ void Differentiate(tree_t* exprTree) {
 
 
 int main() {
-	//char expr[] = "3/sin(x)*pow(4/12,x*2+1)+5*x";
-	char expr[] = "pow(x,x)";
+	char expr[] = "3/sin(x)*pow(4/12,x*2+1)+5*x";
+	//char expr[] = "pow(x,x*3*sin(1/x+3*ln(log(3*pow(x,2),abs(x)))))";
+	//char expr[] = "3/x";
 
 	int syntaxErr = 0;
 	tree_t diffTree = ExprToTree(expr, &syntaxErr);
@@ -587,4 +587,6 @@ int main() {
 	Differentiate(&diffTree);
 
 	a = ShowTree(&diffTree);
+
+	return 0;
 }

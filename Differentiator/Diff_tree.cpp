@@ -270,7 +270,7 @@ int NodesOutput(FILE* gvFile, node_t* node) {
 	fprintf(gvFile, "\t%d [label=\"{%p|%p|%d|%s|{%p|%p}}\"]\n",
 		    (int)node, node, node->parent, node->type, valueS, node->left, node->right);
 #else
-	fprintf(gvFile, "\t%d [label=\"{%d|%s}\"]", (int)node, node->type valueS);
+	fprintf(gvFile, "\t%d [label=\"%s\"]", (int)node, valueS);
 #endif
 	//free(valueS);
 
