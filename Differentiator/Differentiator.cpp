@@ -573,19 +573,154 @@ void Differentiate(tree_t* exprTree) {
 }
 
 
+int SimplifyExprNodes(node_t*& curNode) {
+	assert(curNode != NULL);
+
+	node_t* newNode = NULL;
+	int simplified = 0;
+
+	if (curNode->type == op_node) {
+		if (curNode->left->type == num_node && curNode->right->type == num_node) {
+			float opRes = 0;
+			float leftNum = *(float*)curNode->left->value;
+			float rightNum = *(float*)curNode->right->value;
+
+			switch (curNode->value[0]) {
+			case '+':
+				opRes = leftNum + rightNum;
+				break;
+			case '-':
+				opRes = leftNum - rightNum;
+				break;
+			case '*':
+				opRes = leftNum * rightNum;
+				break;
+			case '/':
+				opRes = leftNum / rightNum;
+				break;
+			default:
+				assert(0);
+			}
+
+			newNode = NUM(curNode->parent, opRes);
+			simplified = 1;
+		}
+
+		else {
+			switch (curNode->value[0]) {
+			case '+': {
+				if (*(float*)curNode->left->value == 0) {
+					newNode = CLONE(curNode->right);
+					simplified = 1;
+				}
+				else if (*(float*)curNode->right->value == 0) {
+					newNode = CLONE(curNode->left);
+					simplified = 1;
+				}
+				break;
+			}
+
+			case '-': {
+				if (*(float*)curNode->right->value == 0) {
+					newNode = CLONE(curNode->left);
+					simplified = 1;
+				}
+				else if (*(float*)curNode->left->value == 0) {
+					newNode = MUL(curNode->parent, NULL, CLONE(curNode->right));
+					newNode->left = NUM(newNode, -1);
+					simplified = 1;
+				}
+				break;
+			}
+
+			case '*': {
+				if (*(float*)curNode->left->value == 1) {
+					newNode = CLONE(curNode->right);
+					simplified = 1;
+				}
+				else if (*(float*)curNode->right->value == 1) {
+					newNode = CLONE(curNode->left);
+					simplified = 1;
+				}
+				break;
+			}
+
+			case '/': {
+				if (*(float*)curNode->right->value == 1) {
+					newNode = CLONE(curNode->left);
+					simplified = 1;
+				}
+				break;
+			}
+			default:
+				assert(0);
+			}
+		}
+	}
+
+	if (simplified) {
+		node_t* curNodeBckp = curNode;
+		newNode->parent = curNode->parent;
+		UpdateParentChild(curNode, newNode);
+		DeleteNodes(curNodeBckp);
+		curNode = newNode;
+	}
+
+	if (curNode->left != NULL) {
+		simplified |= SimplifyExprNodes(curNode->left);
+	}
+	if (curNode->right != NULL) {
+		simplified |= SimplifyExprNodes(curNode->right);
+	}
+
+	return simplified;
+}
+
+int SimplifyExprTree(tree_t* exprTree) {
+	assert(exprTree != NULL);
+
+#ifdef _DEBUG
+	if (!TreeOk(exprTree)) {
+		PrintTree_NOK(*exprTree);
+		return 1;
+	}
+#endif
+
+
+	while (SimplifyExprNodes(exprTree->root)) {}
+
+	RecalcTreeSize(exprTree);
+
+
+#ifdef _DEBUG
+	if (TreeOk(exprTree)) {
+		PrintTree_OK(*exprTree);
+	}
+	else {
+		PrintTree_NOK(*exprTree);
+	}
+#endif
+
+	return 0;
+}
+
 
 int main() {
 	char expr[] = "3/sin(x)*pow(4/12,x*2+1)+5*x";
 	//char expr[] = "pow(x,x*3*sin(1/x+3*ln(log(3*pow(x,2),abs(x)))))";
-	//char expr[] = "3/x";
+	//char expr[] = "0/x";
 
 	int syntaxErr = 0;
 	tree_t diffTree = ExprToTree(expr, &syntaxErr);
-	
+	//int a = ShowTree(&diffTree);
+
+	SimplifyExprTree(&diffTree);
 	int a = ShowTree(&diffTree);
 
 	Differentiate(&diffTree);
+	a = ShowTree(&diffTree);
 
+	SimplifyExprTree(&diffTree);
 	a = ShowTree(&diffTree);
 
 	return 0;
