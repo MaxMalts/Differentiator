@@ -39,6 +39,10 @@ DEF_FUNC(sin, 1, sin_funcI, {
 		curSequence++;
 
 		val = sin(arg);*/
+	}, {
+
+	STANDARD_FUNC_OUTPUT
+
 	})
 
 DEF_FUNC(cos, 1, cos_funcI, {
@@ -87,6 +91,10 @@ DEF_FUNC(cos, 1, cos_funcI, {
 		curSequence++;
 
 		val = cos(arg);*/
+	}, {
+
+	STANDARD_FUNC_OUTPUT
+
 	})
 
 DEF_FUNC(tg, 1, tg_funcI, {
@@ -118,6 +126,10 @@ DEF_FUNC(tg, 1, tg_funcI, {
 //		curSequence++;
 //
 //		val = tan(arg);
+	}, {
+
+	STANDARD_FUNC_OUTPUT
+
 	})
 
 DEF_FUNC(ctg, 1, ctg_funcI, {
@@ -149,6 +161,10 @@ DEF_FUNC(ctg, 1, ctg_funcI, {
 //		curSequence++;
 //
 //		val = 1 / tan(arg);
+	}, {
+
+	STANDARD_FUNC_OUTPUT
+
 	})
 
 DEF_FUNC(arcsin, 1, arcsin_funcI, {
@@ -181,6 +197,10 @@ DEF_FUNC(arcsin, 1, arcsin_funcI, {
 //		curSequence++;
 //
 //		val = asin(arg);
+	}, {
+
+	STANDARD_FUNC_OUTPUT
+
 	})
 
 DEF_FUNC(arccos, 1, arccos_funcI, {
@@ -212,6 +232,10 @@ DEF_FUNC(arccos, 1, arccos_funcI, {
 //		curSequence++;
 //
 //		val = acos(arg);
+	}, {
+
+	STANDARD_FUNC_OUTPUT
+
 	})
 
 DEF_FUNC(arctg, 1, arctg_funcI, {
@@ -242,6 +266,10 @@ DEF_FUNC(arctg, 1, arctg_funcI, {
 //		curSequence++;
 //
 //		val = atan(arg);
+	}, {
+
+	STANDARD_FUNC_OUTPUT
+
 	})
 
 DEF_FUNC(arcctg, 1, arcctg_funcI, {
@@ -272,6 +300,10 @@ DEF_FUNC(arcctg, 1, arcctg_funcI, {
 //		curSequence++;
 //
 //		val = atan(1 / arg);
+	}, {
+
+	STANDARD_FUNC_OUTPUT
+
 	})
 
 DEF_FUNC(exp, 1, exp_funcI, {
@@ -298,6 +330,15 @@ DEF_FUNC(exp, 1, exp_funcI, {
 //		curSequence++;
 //
 //		val = exp(arg);
+	}, {
+
+	assert(curNode->right == NULL);
+	assert(curNode->left != NULL);
+
+	fprintf(fout, "e^{");
+	NodesToLatex(fout, curNode->left);
+	fprintf(fout, "}");
+
 	})
 
 DEF_FUNC(abs, 1, abs_funcI, {
@@ -325,6 +366,15 @@ DEF_FUNC(abs, 1, abs_funcI, {
 //		curSequence++;
 //
 //		val = fabs(arg);
+	}, {
+
+	assert(curNode->right == NULL);
+	assert(curNode->left != NULL);
+
+	fprintf(fout, "|");
+	NodesToLatex(fout, curNode->left);
+	fprintf(fout, "|");
+
 	})
 
 DEF_FUNC(floor, 1, floor_funcI, {
@@ -354,6 +404,15 @@ DEF_FUNC(floor, 1, floor_funcI, {
 //		curSequence++;
 //
 //		val = floor(arg);
+	}, {
+
+	assert(curNode->right == NULL);
+	assert(curNode->left != NULL);
+
+	fprintf(fout, "[");
+	NodesToLatex(fout, curNode->left);
+	fprintf(fout, "]");
+
 	})
 
 DEF_FUNC(sqrt, 1, sqrt_funcI, {
@@ -383,6 +442,15 @@ DEF_FUNC(sqrt, 1, sqrt_funcI, {
 //		curSequence++;
 //
 //		val = floor(arg);
+	}, {
+
+	assert(curNode->right == NULL);
+	assert(curNode->left != NULL);
+
+	fprintf(fout, "\\sqrt{");
+	NodesToLatex(fout, curNode->left);
+	fprintf(fout, "}");
+
 	})
 
 DEF_FUNC(ln, 1, ln_funcI, {
@@ -411,6 +479,10 @@ DEF_FUNC(ln, 1, ln_funcI, {
 //		curSequence++;
 //
 //		val = log(arg);
+	}, {
+
+	STANDARD_FUNC_OUTPUT
+
 	})
 
 DEF_FUNC(lg, 1, lg_funcI, {
@@ -441,6 +513,10 @@ DEF_FUNC(lg, 1, lg_funcI, {
 //		curSequence++;
 //
 //		val = log10(arg);
+	}, {
+
+	STANDARD_FUNC_OUTPUT
+
 	})
 
 DEF_FUNC(log, 2, log_funcI, {
@@ -479,6 +555,17 @@ DEF_FUNC(log, 2, log_funcI, {
 //		curSequence++;
 //
 //		val = log(arg2) / log(arg1);
+	}, {
+
+	assert(curNode->right != NULL);
+	assert(curNode->left != NULL);
+
+	fprintf(fout, "%s_{", funcS);
+	NodesToLatex(fout, curNode->left);
+	fprintf(fout, "}(");
+	NodesToLatex(fout, curNode->right);
+	fprintf(fout, ")");
+
 	})
 
 DEF_FUNC(pow, 2, pow_funcI, {
@@ -517,4 +604,15 @@ DEF_FUNC(pow, 2, pow_funcI, {
 //		curSequence++;
 //
 //		val = pow(arg1, arg2);
+	}, {
+
+	assert(curNode->right != NULL);
+	assert(curNode->left != NULL);
+
+	fprintf(fout, "(", funcS);
+	NodesToLatex(fout, curNode->left);
+	fprintf(fout, ")^{");
+	NodesToLatex(fout, curNode->right);
+	fprintf(fout, "}");
+
 	})

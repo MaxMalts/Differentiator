@@ -705,23 +705,129 @@ int SimplifyExprTree(tree_t* exprTree) {
 }
 
 
+int NodesToLatex(FILE* fout, node_t* curNode) {
+	assert(fout != NULL);
+	assert(curNode != NULL);
+
+	switch (curNode->type) {
+	case num_node: {
+		if (*(float*)curNode->value < 0) {
+			fprintf(fout, "(%g)", *(float*)curNode->value);
+		}
+		else {
+			fprintf(fout, "%g", *(float*)curNode->value);
+		}
+		break;
+	}
+	
+	case var_node: {
+		fprintf(fout, "%c", curNode->value[0]);
+		break;
+	}
+
+	case op_node: {
+		assert(NodeChildsCount(curNode) == 2);
+
+		switch (curNode->value[0]) {
+		case '+':
+		case '-': {
+			fprintf(fout, "(");
+			NodesToLatex(fout, curNode->left);
+			fprintf(fout, "%c", curNode->value[0]);
+			NodesToLatex(fout, curNode->right);
+			fprintf(fout, ")");
+			break;
+		}
+
+		case '*': {
+			NodesToLatex(fout, curNode->left);
+			fprintf(fout, "\\cdot");
+			NodesToLatex(fout, curNode->right);
+			break;
+		}
+
+		case '/': {
+			fprintf(fout, "\\frac{");
+			NodesToLatex(fout, curNode->left);
+			fprintf(fout, "}{");
+			NodesToLatex(fout, curNode->right);
+			fprintf(fout, "}");
+			break;
+		}
+		default:
+			assert(0);
+		}
+		break;
+	}
+
+	case func_node: {
+#define DEF_FUNC(str, NParams, funcI, diffCode, outpCode) \
+		case funcI: {                                                \
+			char funcS[100] = #str;                                  \
+			outpCode;                                                \
+			break;                                                   \
+		}
+
+		switch (curNode->value[0]) {
+#include "functions.h"
+		default:
+			assert(0);
+		}
+		break;
+#undef DEF_FUNC
+	}
+	}
+
+	return 0;
+}
+
+int TreeToLatex(tree_t* exprTree, char* foutName) {
+	assert(exprTree != NULL);
+
+#ifdef _DEBUG
+	if (!TreeOk(exprTree)) {
+		PrintTree_NOK(*exprTree);
+		return 1;
+	}
+#endif
+
+	FILE* fout = fopen(foutName, "w");
+	if (fout == NULL) {
+		perror("Output file open error");
+		return 1;
+	}
+	
+	fprintf(fout, "\\documentclass{article}\n\\pagestyle{empty}\n\n");
+	fprintf(fout, "\\usepackage{mathtools}\n\n");
+	fprintf(fout, "\\begin{document}\n\\begin{equation}\n");
+
+	NodesToLatex(fout, exprTree->root);
+
+	fprintf(fout, "\n\\end{equation}\n\\end{document}");
+	
+	fclose(fout);
+	return 0;
+}
+
 int main() {
-	char expr[] = "3/sin(x)*pow(4/12,x*2+1)+5*x";
+	//char expr[] = "3/sin(x)*pow(4/12,x*2+1)+5*x";
 	//char expr[] = "pow(x,x*3*sin(1/x+3*ln(log(3*pow(x,2),abs(x)))))";
-	//char expr[] = "0/x";
+	char expr[] = "3+5+4";
 
 	int syntaxErr = 0;
 	tree_t diffTree = ExprToTree(expr, &syntaxErr);
-	//int a = ShowTree(&diffTree);
+	int a = ShowTree(&diffTree);
 
-	SimplifyExprTree(&diffTree);
+	TreeToLatex(&diffTree, (char*)"LatexFiles\\test.tex");
+
+	/*SimplifyExprTree(&diffTree);
 	int a = ShowTree(&diffTree);
 
 	Differentiate(&diffTree);
 	a = ShowTree(&diffTree);
 
 	SimplifyExprTree(&diffTree);
-	a = ShowTree(&diffTree);
+	a = ShowTree(&diffTree);*/
 
 	return 0;
 }

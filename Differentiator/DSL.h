@@ -3,6 +3,15 @@
 #include "Functions_enum.h"
 
 
+#define STANDARD_FUNC_OUTPUT \
+	assert(curNode->right == NULL);      \
+	assert(curNode->left != NULL);       \
+	                                     \
+	fprintf(fout, "%s(", funcS);         \
+	NodesToLatex(fout, curNode->left);   \
+	fprintf(fout, ")");
+
+
 /**
 *	«аписывает число типа float в value_t как оно записано в пам€ти
 *
