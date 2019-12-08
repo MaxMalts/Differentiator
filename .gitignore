@@ -352,3 +352,6 @@ MigrationBackup/
 # Graphviz files
 *.gv
 *.png
+
+# Latex folder
+LatexFiles/

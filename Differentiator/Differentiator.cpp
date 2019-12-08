@@ -115,31 +115,27 @@ node_t* GetG(int* syntaxErr) {
 node_t* GetE(int* syntaxErr) {
 	assert(syntaxErr != NULL);
 
-	node_t* res = NULL;
-
-	node_t* node1 = GetT(syntaxErr);
+	node_t* res = GetT(syntaxErr);
 	assert_syntax(*syntaxErr);
 
-	if (*curSequence == '+' || *curSequence == '-') {
+	while (*curSequence == '+' || *curSequence == '-') {
 		char op = *curSequence;
 		curSequence++;
 
-		node_t* node2 = GetE(syntaxErr);
+		node_t* right = GetT(syntaxErr);
 		assert_syntax(*syntaxErr);
 
-		res = CreateNode();
+		node_t* left = res;
 
+		res = CreateNode();
 		res->type = op_node;
 		res->value[0] = op;
 		res->value[1] = '\0';
 
-		res->left = node1;
-		res->right = node2;
-		node1->parent = res;
-		node2->parent = res;
-	}
-	else {
-		res = node1;
+		res->left = left;
+		res->right = right;
+		left->parent = res;
+		right->parent = res;
 	}
 
 	return res;
@@ -157,31 +153,27 @@ node_t* GetE(int* syntaxErr) {
 node_t* GetT(int* syntaxErr) {
 	assert(syntaxErr != NULL);
 
-	node_t* res = NULL;
-
-	node_t* node1 = GetP(syntaxErr);
+	node_t* res = GetP(syntaxErr);
 	assert_syntax(*syntaxErr);
 
-	if (*curSequence == '*' || *curSequence == '/') {
+	while (*curSequence == '*' || *curSequence == '/') {
 		char op = *curSequence;
 		curSequence++;
 
-		node_t* node2 = GetT(syntaxErr);
+		node_t* right = GetP(syntaxErr);
 		assert_syntax(*syntaxErr);
 
-		res = CreateNode();
+		node_t* left = res;
 
+		res = CreateNode();
 		res->type = op_node;
 		res->value[0] = op;
 		res->value[1] = '\0';
 
-		res->left = node1;
-		res->right = node2;
-		node1->parent = res;
-		node2->parent = res;
-	}
-	else {
-		res = node1;
+		res->left = left;
+		res->right = right;
+		left->parent = res;
+		right->parent = res;
 	}
 
 	return res;
@@ -810,9 +802,9 @@ int TreeToLatex(tree_t* exprTree, char* foutName) {
 }
 
 int main() {
-	//char expr[] = "3/sin(x)*pow(4/12,x*2+1)+5*x";
+	char expr[] = "3/sin(x)*pow(4/12,x*2+1)+5*x";
 	//char expr[] = "pow(x,x*3*sin(1/x+3*ln(log(3*pow(x,2),abs(x)))))";
-	char expr[] = "3+5+4";
+	//char expr[] = "4/5*2";
 
 	int syntaxErr = 0;
 	tree_t diffTree = ExprToTree(expr, &syntaxErr);
