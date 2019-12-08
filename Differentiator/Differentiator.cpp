@@ -773,7 +773,7 @@ int NodesToLatex(FILE* fout, node_t* curNode) {
 	return 0;
 }
 
-int TreeToLatex(tree_t* exprTree, char* foutName) {
+int TreeToLatex(tree_t* exprTree, const char* foutName = "LatexFiles\\expression.tex") {
 	assert(exprTree != NULL);
 
 #ifdef _DEBUG
@@ -785,7 +785,7 @@ int TreeToLatex(tree_t* exprTree, char* foutName) {
 
 	FILE* fout = fopen(foutName, "w");
 	if (fout == NULL) {
-		perror("Output file open error");
+		perror("Latex output file open error");
 		return 1;
 	}
 	
@@ -801,16 +801,62 @@ int TreeToLatex(tree_t* exprTree, char* foutName) {
 	return 0;
 }
 
+void CompileLatex(const char* finName = "LatexFiles\\expression.tex", const char* outDir = "LatexFiles") {
+	assert(finName != NULL);
+	assert(outDir != NULL);
+
+	char finNameInvSlash[200] = "";
+	strcpy(finNameInvSlash, finName);
+
+	char outDirInvSlash[200] = "";
+	strcpy(outDirInvSlash, outDir);
+
+	char* foundSlash = strchr(finNameInvSlash, '\\');
+	while (foundSlash) {
+		*foundSlash = '/';
+		foundSlash = strchr(finNameInvSlash, '\\');
+	}
+
+	foundSlash = strchr(outDirInvSlash, '\\');
+	while (foundSlash) {
+		*foundSlash = '/';
+		foundSlash = strchr(outDirInvSlash, '\\');
+	}
+
+	char sysComm[200] = "";
+	sprintf(sysComm, "pdflatex -output-directory=%s %s", outDirInvSlash, finNameInvSlash);
+	system(sysComm);
+}
+
+void OpenExprPdf(const char* fName = "LatexFiles\\expression.pdf") {
+	assert(fName != NULL);
+
+	system(fName);
+}
+
+int ShowExpr(tree_t* exprTree) {
+	assert(exprTree != NULL);
+
+	if (TreeToLatex(exprTree) != 0) {
+		return 1;
+	}
+	
+	CompileLatex();
+	OpenExprPdf();
+
+	return 0;
+}
+
 int main() {
 	//char expr[] = "3/sin(x)*pow(4/12,x*2+1)+5*x";
 	char expr[] = "pow(x,x*3*sin(1/x+3*ln(log(3*pow(x,2),abs(x)))))";
-	//char expr[] = "4*2+4/6*sin(x)";
+	//char expr[] = "6+7";
 
 	int syntaxErr = 0;
 	tree_t diffTree = ExprToTree(expr, &syntaxErr);
 	int a = ShowTree(&diffTree);
 
-	TreeToLatex(&diffTree, (char*)"LatexFiles\\test.tex");
+	ShowExpr(&diffTree);
 
 	/*SimplifyExprTree(&diffTree);
 	int a = ShowTree(&diffTree);
