@@ -733,7 +733,7 @@ int NodesToLatex(FILE* fout, node_t* curNode) {
 
 		case '*': {
 			NodesToLatex(fout, curNode->left);
-			fprintf(fout, "\\cdot");
+			fprintf(fout, "\\cdot ");
 			NodesToLatex(fout, curNode->right);
 			break;
 		}
@@ -791,20 +791,20 @@ int TreeToLatex(tree_t* exprTree, char* foutName) {
 	
 	fprintf(fout, "\\documentclass{article}\n\\pagestyle{empty}\n\n");
 	fprintf(fout, "\\usepackage{mathtools}\n\n");
-	fprintf(fout, "\\begin{document}\n\\begin{equation}\n");
+	fprintf(fout, "\\begin{document}\n\\begin{equation*}\n");
 
 	NodesToLatex(fout, exprTree->root);
 
-	fprintf(fout, "\n\\end{equation}\n\\end{document}");
+	fprintf(fout, "\n\\end{equation*}\n\\end{document}");
 	
 	fclose(fout);
 	return 0;
 }
 
 int main() {
-	char expr[] = "3/sin(x)*pow(4/12,x*2+1)+5*x";
-	//char expr[] = "pow(x,x*3*sin(1/x+3*ln(log(3*pow(x,2),abs(x)))))";
-	//char expr[] = "4/5*2";
+	//char expr[] = "3/sin(x)*pow(4/12,x*2+1)+5*x";
+	char expr[] = "pow(x,x*3*sin(1/x+3*ln(log(3*pow(x,2),abs(x)))))";
+	//char expr[] = "4*2+4/6*sin(x)";
 
 	int syntaxErr = 0;
 	tree_t diffTree = ExprToTree(expr, &syntaxErr);
