@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Buffer.cpp" />
     <ClCompile Include="Differentiator.cpp" />
     <ClCompile Include="Diff_tree.cpp" />
   </ItemGroup>

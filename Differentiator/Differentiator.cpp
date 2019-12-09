@@ -824,14 +824,16 @@ void CompileLatex(const char* finName = "LatexFiles\\expression.tex", const char
 	}
 
 	char sysComm[200] = "";
-	sprintf(sysComm, "pdflatex -output-directory=%s %s", outDirInvSlash, finNameInvSlash);
+	sprintf(sysComm, "start /WAIT cmd /k \"pdflatex -output-directory=%s %s & exit\"", outDirInvSlash, finNameInvSlash);
 	system(sysComm);
 }
 
 void OpenExprPdf(const char* fName = "LatexFiles\\expression.pdf") {
 	assert(fName != NULL);
 
-	system(fName);
+	char sysComm[200] = "";
+	sprintf(sysComm, "start /WAIT cmd /k \"%s & exit\"", fName);
+	system(sysComm);
 }
 
 int ShowExpr(tree_t* exprTree) {
@@ -847,26 +849,50 @@ int ShowExpr(tree_t* exprTree) {
 	return 0;
 }
 
+void OutputHelp() {
+
+}
+
+void StartDifferentiator() {
+
+	printf("Hello, I can differentiate almost every function.\n");
+
+	char expr[1000] = "";
+	while (1) {
+
+		printf("\nType in your function. If you need help type \"help\". For exit type \"exit\":\n");
+
+		scanf("%s[^\n]", expr);
+		fseek(stdin, 0, SEEK_END);
+
+		if (strcmp(expr, "help") == 0) {
+			OutputHelp();
+			continue;
+		}
+		if (strcmp(expr, "exit") == 0) {
+			break;
+		}
+
+		int syntaxErr = 0;
+		tree_t diffTree = ExprToTree(expr, &syntaxErr);
+		if (syntaxErr) {
+			printf("Syntax error. Check the expression correctness.\n");
+			continue;
+		}
+
+		SimplifyExprTree(&diffTree);
+		ShowExpr(&diffTree);
+
+		Differentiate(&diffTree);
+
+		SimplifyExprTree(&diffTree);
+		ShowExpr(&diffTree);
+	}
+}
+
 int main() {
-	//char expr[] = "3/sin(x)*pow(4/12,x*2+1)+5*x";
-	char expr[] = "pow(x,x*3*sin(1/x+3*ln(log(3*pow(x,2),abs(x)))))";
-	//char expr[] = "6+7";
-
-	int syntaxErr = 0;
-	tree_t diffTree = ExprToTree(expr, &syntaxErr);
-	//int a = ShowTree(&diffTree);
-
-
-	SimplifyExprTree(&diffTree);
-	ShowExpr(&diffTree);
-	//int a = ShowTree(&diffTree);
-
-	Differentiate(&diffTree);
-	//a = ShowTree(&diffTree);
-
-	SimplifyExprTree(&diffTree);
-	ShowExpr(&diffTree);
-	//a = ShowTree(&diffTree);*/
+	
+	StartDifferentiator();
 
 	return 0;
 }
