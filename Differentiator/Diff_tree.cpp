@@ -99,7 +99,16 @@ int ValueCmp(value_t* value1, value_t* value2) {
 	assert(value1 != NULL);
 	assert(value2 != NULL);
 
-	return strcmp(*value1, *value2);
+	for (int i = 0; i < treeStrMaxSize; i++) {
+		if (value1[i] < value2[i]) {
+			return -1;
+		}
+		else if (value1[i] > value2[i]) {
+			return 1;
+		}
+	}
+
+	return 0;
 }
 
 /**

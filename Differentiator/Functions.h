@@ -20,7 +20,7 @@ DEF_FUNC(cos, 1, cos_funcI, {
 	newNode = MUL(curNode->parent, NULL, DIFF(CLONE(curNode->left)));
 		newNode->left = MUL(newNode, NULL, NULL);
 			newNode->left->left = NUM(newNode->left, -1);
-			newNode->left->right = COS(newNode->left, CLONE(curNode->left));
+			newNode->left->right = SIN(newNode->left, CLONE(curNode->left));
 
 	}, {
 

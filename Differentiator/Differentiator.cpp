@@ -635,7 +635,7 @@ int SimplifyExprNodes(node_t*& curNode) {
 					simplified = 1;
 				}
 				break;
-			}
+				}
 
 			case '/': {
 				if (*(float*)curNode->right->value == 1) {
