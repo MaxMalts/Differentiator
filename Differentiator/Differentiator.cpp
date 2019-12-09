@@ -545,7 +545,7 @@ void DifferentiateNode(FILE* fout, node_t*& curNode) {
 	}
 	}
 
-	fprintf(fout, "\\begin{equation*}\n(");
+	fprintf(fout, "\\begin{flalign*}\n(");
 	NodesToLatex(fout, curNode);
 	fprintf(fout, ")' = \n");
 
@@ -554,7 +554,7 @@ void DifferentiateNode(FILE* fout, node_t*& curNode) {
 	curNode = newNode;
 
 	NodesToLatex(fout, curNode);
-	fprintf(fout, ";\n\\end{equation*}\n");
+	fprintf(fout, "; &&\n\\end{flalign*}\n");
 
 }
 
@@ -714,7 +714,7 @@ void LatexStructBeg(FILE* fout) {
 	assert(fout != NULL);
 
 	fprintf(fout, "\\documentclass{article}\n\\pagestyle{empty}\n\n");
-	fprintf(fout, "\\usepackage{mathtools}\n\n");
+	fprintf(fout, "\\usepackage[margin=10px]{geometry}\n\\usepackage{mathtools}\n\n");
 	fprintf(fout, "\\begin{document}\n");
 }
 
@@ -813,11 +813,11 @@ int TreeToLatex(FILE* fout, tree_t* exprTree) {
 	}
 #endif
 	
-	fprintf(fout, "\\begin{equation*}\n");
+	fprintf(fout, "\\begin{flalign*}\n");
 
 	NodesToLatex(fout, exprTree->root);
 
-	fprintf(fout, "\n\\end{equation*}\n");
+	fprintf(fout, " &&\n\\end{flalign*}\n");
 
 	return 0;
 }
@@ -928,14 +928,14 @@ int StartDifferentiator() {
 		fprintf(fout, "\\\\After simplification:\n");
 		TreeToLatex(fout, &diffTree);
 
-		fprintf(fout, "\\\\Let's differentiate:\n");
+		fprintf(fout, "\\\\\\\\Let's differentiate:\n");
 		Differentiate(fout, &diffTree);
 
-		fprintf(fout, "\\\\The result is:\n");
+		fprintf(fout, "\\\\\\\\The result is:\n");
 		TreeToLatex(fout, &diffTree);
 
 		SimplifyExprTree(&diffTree);
-		fprintf(fout, "\\\\After simplification:\n");
+		fprintf(fout, "\\\\Final result after simplification:\n");
 		TreeToLatex(fout, &diffTree);
 		
 		LatexStructEnd(fout);
