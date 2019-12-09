@@ -47,7 +47,7 @@ value_t* CharToValue_t(char ch) {
 
 
 #define DIFF(node)\
-	DSLDiffNode(node)
+	DSLDiffNode(fout, node)
 
 #define CLONE(node)\
 	CloneNodes(node)

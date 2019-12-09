@@ -8,7 +8,9 @@
 #include "DSL.h"
 
 
-void DifferentiateNode(node_t*& curNode);
+void DifferentiateNode(FILE* fout, node_t*& curNode);
+
+int NodesToLatex(FILE* fout, node_t* curNode);
 
 
 /**
@@ -459,16 +461,17 @@ tree_t ExprToTree(char* expr, int* syntaxErr = NULL) {
 }
 
 
-node_t* DSLDiffNode(node_t* node) {
+node_t* DSLDiffNode(FILE* fout, node_t* node) {
 	assert(node != NULL);
 
-	DifferentiateNode(node);
+	DifferentiateNode(fout, node);
 
 	return node;
 }
 
 
-void DifferentiateNode(node_t*& curNode) {
+void DifferentiateNode(FILE* fout, node_t*& curNode) {
+	assert(fout != NULL);
 	assert(curNode != NULL);
 
 	node_t* newNode = NULL;
@@ -542,15 +545,25 @@ void DifferentiateNode(node_t*& curNode) {
 	}
 	}
 
+	fprintf(fout, "\\begin{equation*}\n(");
+	NodesToLatex(fout, curNode);
+	fprintf(fout, ")' = \n");
+
 	UpdateParentChild(curNode, newNode);
 	DeleteNodes(curNode);
 	curNode = newNode;
+
+	NodesToLatex(fout, curNode);
+	fprintf(fout, ";\n\\end{equation*}\n");
+
 }
 
-void Differentiate(tree_t* exprTree) {
+
+void Differentiate(FILE* fout, tree_t* exprTree) {
+	assert(fout != NULL);
 	assert(exprTree != NULL);
 
-	DifferentiateNode(exprTree->root);
+	DifferentiateNode(fout, exprTree->root);
 
 	RecalcTreeSize(exprTree);
 
@@ -697,6 +710,21 @@ int SimplifyExprTree(tree_t* exprTree) {
 }
 
 
+void LatexStructBeg(FILE* fout) {
+	assert(fout != NULL);
+
+	fprintf(fout, "\\documentclass{article}\n\\pagestyle{empty}\n\n");
+	fprintf(fout, "\\usepackage{mathtools}\n\n");
+	fprintf(fout, "\\begin{document}\n");
+}
+
+
+void LatexStructEnd(FILE* fout) {
+	assert(fout != NULL);
+	fprintf(fout, "\\end{document}\n");
+}
+
+
 int NodesToLatex(FILE* fout, node_t* curNode) {
 	assert(fout != NULL);
 	assert(curNode != NULL);
@@ -773,7 +801,9 @@ int NodesToLatex(FILE* fout, node_t* curNode) {
 	return 0;
 }
 
-int TreeToLatex(tree_t* exprTree, const char* foutName = "LatexFiles\\expression.tex") {
+
+int TreeToLatex(FILE* fout, tree_t* exprTree) {
+	assert(fout != NULL);
 	assert(exprTree != NULL);
 
 #ifdef _DEBUG
@@ -782,24 +812,16 @@ int TreeToLatex(tree_t* exprTree, const char* foutName = "LatexFiles\\expression
 		return 1;
 	}
 #endif
-
-	FILE* fout = fopen(foutName, "w");
-	if (fout == NULL) {
-		perror("Latex output file open error");
-		return 1;
-	}
 	
-	fprintf(fout, "\\documentclass{article}\n\\pagestyle{empty}\n\n");
-	fprintf(fout, "\\usepackage{mathtools}\n\n");
-	fprintf(fout, "\\begin{document}\n\\begin{equation*}\n");
+	fprintf(fout, "\\begin{equation*}\n");
 
 	NodesToLatex(fout, exprTree->root);
 
-	fprintf(fout, "\n\\end{equation*}\n\\end{document}");
-	
-	fclose(fout);
+	fprintf(fout, "\n\\end{equation*}\n");
+
 	return 0;
 }
+
 
 void CompileLatex(const char* finName = "LatexFiles\\expression.tex", const char* outDir = "LatexFiles") {
 	assert(finName != NULL);
@@ -828,6 +850,7 @@ void CompileLatex(const char* finName = "LatexFiles\\expression.tex", const char
 	system(sysComm);
 }
 
+
 void OpenExprPdf(const char* fName = "LatexFiles\\expression.pdf") {
 	assert(fName != NULL);
 
@@ -836,20 +859,22 @@ void OpenExprPdf(const char* fName = "LatexFiles\\expression.pdf") {
 	system(sysComm);
 }
 
-int ShowExpr(tree_t* exprTree) {
-	assert(exprTree != NULL);
 
-	if (TreeToLatex(exprTree) != 0) {
-		return 1;
-	}
-	
-	CompileLatex();
-	OpenExprPdf();
+//int ShowExpr(tree_t* exprTree) {
+//	assert(exprTree != NULL);
+//
+//	if (TreeToLatex(exprTree) != 0) {
+//		return 1;
+//	}
+//	
+//	CompileLatex();
+//	OpenExprPdf();
+//
+//	return 0;
+//}
 
-	return 0;
-}
 
-void OutputHelp() {
+void PrintHelp() {
 	printf("Available functions:\n");
 
 #define DEF_FUNC(str)\
@@ -860,7 +885,9 @@ void OutputHelp() {
 #undef DEF_FUNC
 }
 
-void StartDifferentiator() {
+
+int StartDifferentiator() {
+	const char foutName[] = "LatexFiles\\expression.tex";
 
 	printf("Hello, I can differentiate almost every function.\n");
 
@@ -873,7 +900,7 @@ void StartDifferentiator() {
 		fseek(stdin, 0, SEEK_END);
 
 		if (strcmp(expr, "help") == 0) {
-			OutputHelp();
+			PrintHelp();
 			continue;
 		}
 		if (strcmp(expr, "exit") == 0) {
@@ -887,19 +914,40 @@ void StartDifferentiator() {
 			continue;
 		}
 
-		SimplifyExprTree(&diffTree);
-		ShowExpr(&diffTree);
+		FILE* fout = fopen(foutName, "w");
+		if (fout == NULL) {
+			perror("Latex output file open error");
+			return 1;
+		}
 
-		Differentiate(&diffTree);
+		LatexStructBeg(fout);
+		fprintf(fout, "You entered:\n");
+		TreeToLatex(fout, &diffTree);
 
 		SimplifyExprTree(&diffTree);
-		ShowExpr(&diffTree);
+		fprintf(fout, "\\\\After simplification:\n");
+		TreeToLatex(fout, &diffTree);
+
+		fprintf(fout, "\\\\Let's differentiate:\n");
+		Differentiate(fout, &diffTree);
+
+		fprintf(fout, "\\\\The result is:\n");
+		TreeToLatex(fout, &diffTree);
+
+		SimplifyExprTree(&diffTree);
+		fprintf(fout, "\\\\After simplification:\n");
+		TreeToLatex(fout, &diffTree);
+		
+		LatexStructEnd(fout);
+		fclose(fout);
+
+		CompileLatex();
+		OpenExprPdf();
 	}
 }
 
 int main() {
 	
-	StartDifferentiator();
+	return StartDifferentiator();
 
-	return 0;
 }
