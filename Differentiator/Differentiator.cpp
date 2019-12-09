@@ -854,18 +854,19 @@ int main() {
 
 	int syntaxErr = 0;
 	tree_t diffTree = ExprToTree(expr, &syntaxErr);
-	int a = ShowTree(&diffTree);
+	//int a = ShowTree(&diffTree);
 
-	ShowExpr(&diffTree);
-
-	/*SimplifyExprTree(&diffTree);
-	int a = ShowTree(&diffTree);
-
-	Differentiate(&diffTree);
-	a = ShowTree(&diffTree);
 
 	SimplifyExprTree(&diffTree);
-	a = ShowTree(&diffTree);*/
+	ShowExpr(&diffTree);
+	//int a = ShowTree(&diffTree);
+
+	Differentiate(&diffTree);
+	//a = ShowTree(&diffTree);
+
+	SimplifyExprTree(&diffTree);
+	ShowExpr(&diffTree);
+	//a = ShowTree(&diffTree);*/
 
 	return 0;
 }

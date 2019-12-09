@@ -1201,365 +1201,365 @@ int TreeDestructor(tree_t* tree) {
 }
 
 
-///*  Не для пользователя
-//*	Создает код по узлу
-//*
-//*	@param[in] node Узел
-//*	@param[out] codeBuf Буфер с кодом
-//*
-//*	@return 0 - все прошло нормально
-//*/
-//
-//int NodesToCode(node_t* node, buf_t* codeBuf) {
-//	assert(node != NULL);
-//	assert(codeBuf != NULL);
-//
-//	char* valueS = Value_tToStr(node->value);
-//	
-//	if (NodeChildsCount(node) > 0) {
-//		Bufcat(codeBuf, valueS);
-//		free(valueS);
-//		Bufcat(codeBuf, "{");
-//
-//		if (node->left != NULL) {
-//			NodesToCode(node->left, codeBuf);
-//		}
-//		else {
-//			Bufcat(codeBuf, "@");
-//		}
-//		Bufcat(codeBuf, ",");
-//		if (node->right != NULL) {
-//			NodesToCode(node->right, codeBuf);
-//		}
-//		else {
-//			Bufcat(codeBuf, "@");
-//		}
-//		Bufcat(codeBuf, "}");
-//	}
-//	else {
-//		Bufcat(codeBuf, "{");
-//		Bufcat(codeBuf, valueS);
-//		Bufcat(codeBuf, "}");
-//		free(valueS);
-//	}
-//
-//	return 0;
-//}
-//
-//
-///**
-//*	Создает код по дереву
-//*
-//*	@param[in] tree Дерево
-//*	@param[out] size Длина полученного кода (без учета '\0').\
-// Если значение отрицательное, то возникла следующая ошибка:\
-// -1 - на вход подалось дерево с ошибкой (только в режиме отладки);\
-// -2 -проблема при создании буфера; 0 - все прошло нормально
-//*
-//*	@return Указатель на буфер с кодом. В случае ошибки равен NULL.\
-// Не забудьте освободить память по этому указателю!
-//*/
-//
-//char* TreeToCode(tree_t* tree, int* size) {
-//	assert(tree != NULL);
-//
-//#ifdef _DEBUG
-//	if (!TreeOk(tree)) {
-//		PrintTree_NOK(*tree);
-//		if (size != NULL) {
-//			*size = -1;
-//		}
-//		return NULL;
-//	}
-//#endif
-//
-//	int bufConstrErr = 0;
-//	buf_t codeBuf = BufConstructor('w', &bufConstrErr);
-//	if (bufConstrErr != 0) {
-//		if (size != NULL) {
-//			*size = -2;
-//		}
-//		return NULL;
-//	}
-//	
-//	Bufcat(&codeBuf, "{");
-//	NodesToCode(tree->root, &codeBuf);
-//	Bufcat(&codeBuf, "}");
-//
-//	char* res = (char*)calloc(codeBuf.lastChar + 2, sizeof(char));
-//	strncpy(res, codeBuf.str, codeBuf.lastChar + 1);
-//	if (size != NULL) {
-//		*size = codeBuf.lastChar + 1;
-//	}
-//
-//	BufDestructor(&codeBuf);
-//
-//	return res;
-//}
-//
-//
-///*  Не для пользователя
-//*	Рекурсивно создает узлы по коду
-//*
-//*	@param[in] buf Буфер с кодом
-//*	@param[out] node Текущий узел. Внимание, при первичном вызове\
-// должен быть NULL, сюда запишется корневой узел!
-//*	@param[out] size
-//*
-//*	@return 1 - ошибка в коде; 0 - все прошло нормально
-//*/
-//
-//int CodeToNodes(buf_t* buf, node_t*& node, int* size) {
-//	assert(buf != NULL);
-//	assert(size != NULL);
-//
-//	char curCh = Bgetc(buf);
-//	if (curCh == '{') {
-//		char nextCh = Bgetc(buf);
-//		if (nextCh == EOB) {
-//			return 1;
-//		}
-//		if (nextCh != '{') {
-//			Bseek(buf, -1, BSEEK_CUR);
-//		}
-//
-//		if (Bgetc(buf) == '@') {
-//			node->left = NULL;
-//
-//			int err = 0;
-//			err = CodeToNodes(buf, node, size);
-//			if (err != 0) {
-//				return err;
-//			}
-//		}
-//		else {
-//			Bseek(buf, -1, BSEEK_CUR);
-//
-//			char valueS[100] = "";
-//			ReadToChar(valueS, buf, "{}");
-//
-//			node_t* newNode = CreateNode();
-//
-//			value_t value = {};
-//			StrToValue_t(valueS, &value);
-//			ChangeNodeValue(newNode, value);
-//			if (node != NULL) {
-//				node->left = newNode;
-//			}
-//			newNode->parent = node;
-//			if (node == NULL) {
-//				node = newNode;
-//			}
-//			(*size)++;
-//
-//			int err = 0;
-//			err = CodeToNodes(buf, newNode, size);
-//			if (err != 0) {
-//				return err;
-//			}
-//		}
-//	}
-//	else if (curCh == ',') {
-//		char nextCh = Bgetc(buf);
-//		if (nextCh == EOB) {
-//			return 1;
-//		}
-//		if (nextCh != '{') {
-//			Bseek(buf, -1, BSEEK_CUR);
-//		}
-//
-//		if (Bgetc(buf) == '@') {
-//			node->right = NULL;
-//
-//			int err = 0;
-//			err = CodeToNodes(buf, node, size);
-//			if (err != 0) {
-//				return err;
-//			}
-//		}
-//		else {
-//			Bseek(buf, -1, BSEEK_CUR);
-//
-//			char valueS[100] = "";
-//			ReadToChar(valueS, buf, "{}");
-//
-//			node_t* newNode = CreateNode();
-//
-//			value_t value = {};
-//			StrToValue_t(valueS, &value);
-//			ChangeNodeValue(newNode, value);
-//			node->right = newNode;
-//			newNode->parent = node;
-//			(*size)++;
-//
-//			int err = 0;
-//			err = CodeToNodes(buf, newNode, size);
-//			if (err != 0) {
-//				return err;
-//			}
-//		}
-//	}
-//	else if (curCh == '}') {
-//
-//		if (node->parent != NULL) {
-//			int err = 0;
-//			err = CodeToNodes(buf, node->parent, size);
-//			if (err != 0) {
-//				return err;
-//			}
-//		}
-//	}
-//	else {
-//		return 1;
-//	}
-//
-//	return 0;
-//}
-//
-//
-///**
-//*	Создает дерево по коду
-//*
-//*	@param[in] code Код
-//*	@param[in] treeName Имя дерева (по умолчанию "tree_from_code")
-//*	@param[out] err Код ошибки (по желанию): 1 - произвольная ошибка;\
-// 2 - ошибка в коде; 0 - все прошло нормально
-//*
-//*	@return Сгенерированное дерево
-//*/
-//
-//tree_t CodeToTree(char* code, const char* treeName, int* err) {
-//	assert(code != NULL);
-//
-//	tree_t tree = TreeConstructor(treeName);
-//
-//#ifdef _DEBUG
-//	if (TreeOk(&tree)) {
-//		PrintTree_OK(tree);
-//	}
-//	else {
-//		PrintTree_NOK(tree);
-//	}
-//#endif
-//
-//	int constructErr = 0;
-//	buf_t codeBuf = BufConstructor('r', code, strlen(code), &constructErr);
-//	if (constructErr != 0) {
-//		*err = 1;
-//		return tree;
-//	}
-//
-//	free(tree.root);
-//	tree.root = NULL;
-//	tree.size = 0;
-//	int retErr = CodeToNodes(&codeBuf, tree.root, &tree.size);
-//	
-//	if(retErr!=0){
-//		if (err != NULL) {
-//			*err = 2;
-//		}
-//		return tree;
-//	}
-//
-//#ifdef _DEBUG
-//	if (!TreeOk(&tree)) {
-//		if (err != NULL) {
-//			*err = 2;
-//		}
-//		return tree;
-//	}
-//#endif
-//
-//	return tree;
-//}
-//
-//
-///*  Не для пользователя
-//*	Ищет узел с указанным значением (рекурсивно)
-//*
-//*	@param[in] curNode Текущий узел (при первичном вызове должен быть корнем дерева!)
-//*	@param[in] value Значение
-//*	@param[out] way Путь до найденного узла (если нашелся) в формате строки из '0' и '1',\
-// где '0' означает левого сына, '1' - правого. В конце строки ставится '\0'
-//*
-//*	@return 1 (true) - узел найдет; 0 (false) - узел не найден
-//*/
-//
-//int NodeByValue(node_t* curNode, value_t* value, buf_t* way, node_t*& foundNode) {
-//	assert(curNode != NULL);
-//	assert(value != NULL);
-//	assert(way != NULL);
-//
-//	if (ValueCmp(&curNode->value, value) == 0) {
-//		Bputc(way, '\0');
-//		foundNode = curNode;
-//		return 1;
-//	}
-//	if (NodeChildsCount(curNode) == 0) {
-//		Bseek(way, -1, SEEK_CUR);
-//		Bputc(way, '\0');
-//		Bseek(way, -1, SEEK_CUR);
-//		return 0;
-//	}
-//
-//	if (curNode->left != NULL) {
-//		Bputc(way, '0');
-//		if (NodeByValue(curNode->left, value, way, foundNode) == 1) {
-//			return 1;
-//		}
-//	}
-//	if (curNode->right != NULL) {
-//		Bputc(way, '1');
-//		if (NodeByValue(curNode->right, value, way, foundNode) == 1) {
-//			return 1;
-//		}
-//	}
-//	Bseek(way, -1, SEEK_CUR);
-//	Bputc(way, '\0');
-//	Bseek(way, -1, SEEK_CUR);
-//
-//	return 0;
-//}
-//
-//
-///**
-//*	Ищет узел с указанным значением
-//*
-//*	@param[in] tree Дерево
-//*	@param[in] value Значение
-//*	@param[out] err Ошибка: 1 - произвольная ошибка; 2 - узел с таким значением не найден
-//*
-//*	@return Указатель на строку с путем до найденного узла (если нашелся) в виде '0' и '1',\
-// где '0' означает левого сына, '1' - правого. В конце строки ставится '\0'.\
-// Не забудьте освободить память по этому указателю! Если возникла ошибка, возвращает NULL.
-//*/
-//
-//char* FindNodeByValue(tree_t* tree, value_t* value, node_t*& foundNode, int* err) {
-//	assert(tree != NULL);
-//	assert(value != NULL);
-//
-//	int constrErr = 0;
-//	buf_t way = BufConstructor('w', &constrErr);
-//	if (constrErr != 0) {
-//		if (err != NULL) {
-//			*err = 1;
-//		}
-//		return NULL;
-//	}
-//
-//	if (!NodeByValue(tree->root, value, &way, foundNode)) {
-//		if (err != NULL) {
-//			*err = 2;
-//		}
-//		free(way.str);
-//		BufDestructor(&way);
-//		return NULL;
-//	}
-//
-//	char* resWay = way.str;
-//	BufDestructor(&way);
-//	if (err != NULL) {
-//		*err = 0;
-//	}
-//	return resWay;
-//}
+/*  Не для пользователя
+*	Создает код по узлу
+*
+*	@param[in] node Узел
+*	@param[out] codeBuf Буфер с кодом
+*
+*	@return 0 - все прошло нормально
+*/
+
+int NodesToCode(node_t* node, buf_t* codeBuf) {
+	assert(node != NULL);
+	assert(codeBuf != NULL);
+
+	char* valueS = Value_tToStr(node->value);
+	
+	if (NodeChildsCount(node) > 0) {
+		Bufcat(codeBuf, valueS);
+		free(valueS);
+		Bufcat(codeBuf, "{");
+
+		if (node->left != NULL) {
+			NodesToCode(node->left, codeBuf);
+		}
+		else {
+			Bufcat(codeBuf, "@");
+		}
+		Bufcat(codeBuf, ",");
+		if (node->right != NULL) {
+			NodesToCode(node->right, codeBuf);
+		}
+		else {
+			Bufcat(codeBuf, "@");
+		}
+		Bufcat(codeBuf, "}");
+	}
+	else {
+		Bufcat(codeBuf, "{");
+		Bufcat(codeBuf, valueS);
+		Bufcat(codeBuf, "}");
+		free(valueS);
+	}
+
+	return 0;
+}
+
+
+/**
+*	Создает код по дереву
+*
+*	@param[in] tree Дерево
+*	@param[out] size Длина полученного кода (без учета '\0').\
+ Если значение отрицательное, то возникла следующая ошибка:\
+ -1 - на вход подалось дерево с ошибкой (только в режиме отладки);\
+ -2 -проблема при создании буфера; 0 - все прошло нормально
+*
+*	@return Указатель на буфер с кодом. В случае ошибки равен NULL.\
+ Не забудьте освободить память по этому указателю!
+*/
+
+char* TreeToCode(tree_t* tree, int* size) {
+	assert(tree != NULL);
+
+#ifdef _DEBUG
+	if (!TreeOk(tree)) {
+		PrintTree_NOK(*tree);
+		if (size != NULL) {
+			*size = -1;
+		}
+		return NULL;
+	}
+#endif
+
+	int bufConstrErr = 0;
+	buf_t codeBuf = BufConstructor('w', &bufConstrErr);
+	if (bufConstrErr != 0) {
+		if (size != NULL) {
+			*size = -2;
+		}
+		return NULL;
+	}
+	
+	Bufcat(&codeBuf, "{");
+	NodesToCode(tree->root, &codeBuf);
+	Bufcat(&codeBuf, "}");
+
+	char* res = (char*)calloc(codeBuf.lastChar + 2, sizeof(char));
+	strncpy(res, codeBuf.str, codeBuf.lastChar + 1);
+	if (size != NULL) {
+		*size = codeBuf.lastChar + 1;
+	}
+
+	BufDestructor(&codeBuf);
+
+	return res;
+}
+
+
+/*  Не для пользователя
+*	Рекурсивно создает узлы по коду
+*
+*	@param[in] buf Буфер с кодом
+*	@param[out] node Текущий узел. Внимание, при первичном вызове\
+ должен быть NULL, сюда запишется корневой узел!
+*	@param[out] size
+*
+*	@return 1 - ошибка в коде; 0 - все прошло нормально
+*/
+
+int CodeToNodes(buf_t* buf, node_t*& node, int* size) {
+	assert(buf != NULL);
+	assert(size != NULL);
+
+	char curCh = Bgetc(buf);
+	if (curCh == '{') {
+		char nextCh = Bgetc(buf);
+		if (nextCh == EOB) {
+			return 1;
+		}
+		if (nextCh != '{') {
+			Bseek(buf, -1, BSEEK_CUR);
+		}
+
+		if (Bgetc(buf) == '@') {
+			node->left = NULL;
+
+			int err = 0;
+			err = CodeToNodes(buf, node, size);
+			if (err != 0) {
+				return err;
+			}
+		}
+		else {
+			Bseek(buf, -1, BSEEK_CUR);
+
+			char valueS[100] = "";
+			ReadToChar(valueS, buf, "{}");
+
+			node_t* newNode = CreateNode();
+
+			value_t value = {};
+			StrToValue_t(valueS, &value);
+			ChangeNodeValue(newNode, value);
+			if (node != NULL) {
+				node->left = newNode;
+			}
+			newNode->parent = node;
+			if (node == NULL) {
+				node = newNode;
+			}
+			(*size)++;
+
+			int err = 0;
+			err = CodeToNodes(buf, newNode, size);
+			if (err != 0) {
+				return err;
+			}
+		}
+	}
+	else if (curCh == ',') {
+		char nextCh = Bgetc(buf);
+		if (nextCh == EOB) {
+			return 1;
+		}
+		if (nextCh != '{') {
+			Bseek(buf, -1, BSEEK_CUR);
+		}
+
+		if (Bgetc(buf) == '@') {
+			node->right = NULL;
+
+			int err = 0;
+			err = CodeToNodes(buf, node, size);
+			if (err != 0) {
+				return err;
+			}
+		}
+		else {
+			Bseek(buf, -1, BSEEK_CUR);
+
+			char valueS[100] = "";
+			ReadToChar(valueS, buf, "{}");
+
+			node_t* newNode = CreateNode();
+
+			value_t value = {};
+			StrToValue_t(valueS, &value);
+			ChangeNodeValue(newNode, value);
+			node->right = newNode;
+			newNode->parent = node;
+			(*size)++;
+
+			int err = 0;
+			err = CodeToNodes(buf, newNode, size);
+			if (err != 0) {
+				return err;
+			}
+		}
+	}
+	else if (curCh == '}') {
+
+		if (node->parent != NULL) {
+			int err = 0;
+			err = CodeToNodes(buf, node->parent, size);
+			if (err != 0) {
+				return err;
+			}
+		}
+	}
+	else {
+		return 1;
+	}
+
+	return 0;
+}
+
+
+/**
+*	Создает дерево по коду
+*
+*	@param[in] code Код
+*	@param[in] treeName Имя дерева (по умолчанию "tree_from_code")
+*	@param[out] err Код ошибки (по желанию): 1 - произвольная ошибка;\
+ 2 - ошибка в коде; 0 - все прошло нормально
+*
+*	@return Сгенерированное дерево
+*/
+
+tree_t CodeToTree(char* code, const char* treeName, int* err) {
+	assert(code != NULL);
+
+	tree_t tree = TreeConstructor(treeName);
+
+#ifdef _DEBUG
+	if (TreeOk(&tree)) {
+		PrintTree_OK(tree);
+	}
+	else {
+		PrintTree_NOK(tree);
+	}
+#endif
+
+	int constructErr = 0;
+	buf_t codeBuf = BufConstructor('r', code, strlen(code), &constructErr);
+	if (constructErr != 0) {
+		*err = 1;
+		return tree;
+	}
+
+	free(tree.root);
+	tree.root = NULL;
+	tree.size = 0;
+	int retErr = CodeToNodes(&codeBuf, tree.root, &tree.size);
+	
+	if(retErr!=0){
+		if (err != NULL) {
+			*err = 2;
+		}
+		return tree;
+	}
+
+#ifdef _DEBUG
+	if (!TreeOk(&tree)) {
+		if (err != NULL) {
+			*err = 2;
+		}
+		return tree;
+	}
+#endif
+
+	return tree;
+}
+
+
+/*  Не для пользователя
+*	Ищет узел с указанным значением (рекурсивно)
+*
+*	@param[in] curNode Текущий узел (при первичном вызове должен быть корнем дерева!)
+*	@param[in] value Значение
+*	@param[out] way Путь до найденного узла (если нашелся) в формате строки из '0' и '1',\
+ где '0' означает левого сына, '1' - правого. В конце строки ставится '\0'
+*
+*	@return 1 (true) - узел найдет; 0 (false) - узел не найден
+*/
+
+int NodeByValue(node_t* curNode, value_t* value, buf_t* way, node_t*& foundNode) {
+	assert(curNode != NULL);
+	assert(value != NULL);
+	assert(way != NULL);
+
+	if (ValueCmp(&curNode->value, value) == 0) {
+		Bputc(way, '\0');
+		foundNode = curNode;
+		return 1;
+	}
+	if (NodeChildsCount(curNode) == 0) {
+		Bseek(way, -1, SEEK_CUR);
+		Bputc(way, '\0');
+		Bseek(way, -1, SEEK_CUR);
+		return 0;
+	}
+
+	if (curNode->left != NULL) {
+		Bputc(way, '0');
+		if (NodeByValue(curNode->left, value, way, foundNode) == 1) {
+			return 1;
+		}
+	}
+	if (curNode->right != NULL) {
+		Bputc(way, '1');
+		if (NodeByValue(curNode->right, value, way, foundNode) == 1) {
+			return 1;
+		}
+	}
+	Bseek(way, -1, SEEK_CUR);
+	Bputc(way, '\0');
+	Bseek(way, -1, SEEK_CUR);
+
+	return 0;
+}
+
+
+/**
+*	Ищет узел с указанным значением
+*
+*	@param[in] tree Дерево
+*	@param[in] value Значение
+*	@param[out] err Ошибка: 1 - произвольная ошибка; 2 - узел с таким значением не найден
+*
+*	@return Указатель на строку с путем до найденного узла (если нашелся) в виде '0' и '1',\
+ где '0' означает левого сына, '1' - правого. В конце строки ставится '\0'.\
+ Не забудьте освободить память по этому указателю! Если возникла ошибка, возвращает NULL.
+*/
+
+char* FindNodeByValue(tree_t* tree, value_t* value, node_t*& foundNode, int* err) {
+	assert(tree != NULL);
+	assert(value != NULL);
+
+	int constrErr = 0;
+	buf_t way = BufConstructor('w', &constrErr);
+	if (constrErr != 0) {
+		if (err != NULL) {
+			*err = 1;
+		}
+		return NULL;
+	}
+
+	if (!NodeByValue(tree->root, value, &way, foundNode)) {
+		if (err != NULL) {
+			*err = 2;
+		}
+		free(way.str);
+		BufDestructor(&way);
+		return NULL;
+	}
+
+	char* resWay = way.str;
+	BufDestructor(&way);
+	if (err != NULL) {
+		*err = 0;
+	}
+	return resWay;
+}
