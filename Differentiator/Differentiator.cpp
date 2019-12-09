@@ -850,7 +850,14 @@ int ShowExpr(tree_t* exprTree) {
 }
 
 void OutputHelp() {
+	printf("Available functions:\n");
 
+#define DEF_FUNC(str)\
+	printf("%s\n", #str);
+
+#include "functions.h"
+
+#undef DEF_FUNC
 }
 
 void StartDifferentiator() {
