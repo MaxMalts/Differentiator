@@ -12,6 +12,15 @@
 	fprintf(fout, ")");
 
 
+node_t* DSLSetDiff(node_t* node) {
+	assert(node != NULL);
+
+	node->diff = 1;
+
+	return node;
+}
+
+
 /**
 *	«аписывает число типа float в value_t как оно записано в пам€ти
 *
@@ -47,7 +56,7 @@ value_t* CharToValue_t(char ch) {
 
 
 #define DIFF(node)\
-	DSLDiffNode(fout, node)
+	DSLSetDiff(node)
 
 #define CLONE(node)\
 	CloneNodes(node)

@@ -17,6 +17,7 @@ enum node_type {
 };
 
 struct node_t {
+	int diff = 0;
 	node_type type = unknown_node;
 	value_t value = {};
 	node_t* left = NULL;

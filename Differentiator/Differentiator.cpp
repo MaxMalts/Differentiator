@@ -8,7 +8,7 @@
 #include "DSL.h"
 
 
-void DifferentiateNode(FILE* fout, node_t*& curNode);
+int DifferentiateNode(node_t*& curNode);
 
 int NodesToLatex(FILE* fout, node_t* curNode);
 
@@ -461,72 +461,72 @@ tree_t ExprToTree(char* expr, int* syntaxErr = NULL) {
 }
 
 
-node_t* DSLDiffNode(FILE* fout, node_t* node) {
-	assert(node != NULL);
+//node_t* DSLDiffNode(FILE* fout, node_t* node) {
+//	assert(node != NULL);
+//
+//	DifferentiateNode(fout, node);
+//
+//	return node;
+//}
 
-	DifferentiateNode(fout, node);
 
-	return node;
-}
-
-
-void DifferentiateNode(FILE* fout, node_t*& curNode) {
-	assert(fout != NULL);
+int DifferentiateNode(node_t*& curNode) {
 	assert(curNode != NULL);
 
 	node_t* newNode = NULL;
 
-	switch (curNode->type) {
-	case num_node: {
-		assert(NodeChildsCount(curNode) == 0);
+	if (curNode->diff) {
+		switch (curNode->type) {
+		case num_node: {
+			assert(NodeChildsCount(curNode) == 0);
 
-		newNode = NUM(curNode->parent, 0);
+			newNode = NUM(curNode->parent, 0);
 
-		break;
-	}
-	case var_node: {
-		assert(NodeChildsCount(curNode) == 0);
-
-		newNode = NUM(curNode->parent, 1);
-
-		break;
-	}
-	case op_node: {
-		assert(NodeChildsCount(curNode) == 2);
-
-		switch (curNode->value[0]) {
-		case '+': {
-			newNode = PLUS(curNode->parent, DIFF(CLONE(curNode->left)), DIFF(CLONE(curNode->right)));
 			break;
 		}
+		case var_node: {
+			assert(NodeChildsCount(curNode) == 0);
 
-		case '-': {
-			newNode = MINUS(curNode->parent, DIFF(CLONE(curNode->left)), DIFF(CLONE(curNode->right)));
+			newNode = NUM(curNode->parent, 1);
+
 			break;
 		}
+		case op_node: {
+			assert(NodeChildsCount(curNode) == 2);
 
-		case '*': {
-			newNode = PLUS(curNode->parent, NULL, NULL);
-			newNode->left = MUL(newNode, DIFF(CLONE(curNode->left)), CLONE(curNode->right));
-			newNode->right = MUL(newNode, CLONE(curNode->left), DIFF(CLONE(curNode->right)));
-			break;
-		}
+			switch (curNode->value[0]) {
+			case '+': {
+				newNode = PLUS(curNode->parent, DIFF(CLONE(curNode->left)), DIFF(CLONE(curNode->right)));
+				break;
+			}
 
-		case '/': {
-			newNode = DIV(curNode->parent, NULL, NULL);
+			case '-': {
+				newNode = MINUS(curNode->parent, DIFF(CLONE(curNode->left)), DIFF(CLONE(curNode->right)));
+				break;
+			}
+
+			case '*': {
+				newNode = PLUS(curNode->parent, NULL, NULL);
+				newNode->left = MUL(newNode, DIFF(CLONE(curNode->left)), CLONE(curNode->right));
+				newNode->right = MUL(newNode, CLONE(curNode->left), DIFF(CLONE(curNode->right)));
+				break;
+			}
+
+			case '/': {
+				newNode = DIV(curNode->parent, NULL, NULL);
 				newNode->left = MINUS(newNode, NULL, NULL);
-					newNode->left->left = MUL(newNode->left, DIFF(CLONE(curNode->left)), CLONE(curNode->right));
-					newNode->left->right = MUL(newNode->left, CLONE(curNode->left), DIFF(CLONE(curNode->right)));
+				newNode->left->left = MUL(newNode->left, DIFF(CLONE(curNode->left)), CLONE(curNode->right));
+				newNode->left->right = MUL(newNode->left, CLONE(curNode->left), DIFF(CLONE(curNode->right)));
 				newNode->right = MUL(newNode, CLONE(curNode->right), CLONE(curNode->right));
+				break;
+			}
+
+			default:
+				assert(0);
+			}
 			break;
 		}
-
-		default:
-			assert(0);
-		}
-		break;
-	}
-	case func_node: {
+		case func_node: {
 
 #define DEF_FUNC(str, NParams, funcI, code) \
 	case (funcI): {                                 \
@@ -534,36 +534,51 @@ void DifferentiateNode(FILE* fout, node_t*& curNode) {
 		break;                                      \
 	}
 
-		switch (curNode->value[0]) {
+			switch (curNode->value[0]) {
 #include "functions.h"
-		default:
-			assert(0);
-		}
+			default:
+				assert(0);
+			}
 #undef DEF_FUNC
 
-		break;
+			break;
+		}
+		}
 	}
+
+	int differentiated = curNode->diff;
+
+	if (differentiated) {
+		UpdateParentChild(curNode, newNode);
+		DeleteNodes(curNode);
+		curNode = newNode;
+	}
+	else {
+		if (curNode->left != NULL) {
+			differentiated |= DifferentiateNode(curNode->left);
+		}
+		if (!differentiated && curNode->right!=NULL) {
+			differentiated |= DifferentiateNode(curNode->right);
+		}
 	}
 
-	fprintf(fout, "\\begin{flalign*}\n(");
-	NodesToLatex(fout, curNode);
-	fprintf(fout, ")' = \n");
-
-	UpdateParentChild(curNode, newNode);
-	DeleteNodes(curNode);
-	curNode = newNode;
-
-	NodesToLatex(fout, curNode);
-	fprintf(fout, "; &&\n\\end{flalign*}\n");
-
+	return differentiated;
 }
 
 
-void Differentiate(FILE* fout, tree_t* exprTree) {
+void DifferentiateTree(FILE* fout, tree_t* exprTree) {
 	assert(fout != NULL);
 	assert(exprTree != NULL);
 
-	DifferentiateNode(fout, exprTree->root);
+	fprintf(fout, "\\begin{flalign*}\n");
+	NodesToLatex(fout, exprTree->root);
+
+	DIFF(exprTree->root);
+	while (DifferentiateNode(exprTree->root)) {
+		fprintf(fout, " =\\\\\n= ");
+		NodesToLatex(fout, exprTree->root);
+	}
+	fprintf(fout, " &&\n\\end{flalign*}\n");
 
 	RecalcTreeSize(exprTree);
 
@@ -729,6 +744,10 @@ int NodesToLatex(FILE* fout, node_t* curNode) {
 	assert(fout != NULL);
 	assert(curNode != NULL);
 
+	if (curNode->diff) {
+		fprintf(fout, "(");
+	}
+
 	switch (curNode->type) {
 	case num_node: {
 		if (*(float*)curNode->value < 0) {
@@ -796,6 +815,10 @@ int NodesToLatex(FILE* fout, node_t* curNode) {
 		break;
 #undef DEF_FUNC
 	}
+	}
+
+	if (curNode->diff) {
+		fprintf(fout, ")'");
 	}
 
 	return 0;
@@ -929,7 +952,7 @@ int StartDifferentiator() {
 		TreeToLatex(fout, &diffTree);
 
 		fprintf(fout, "\\\\\\\\Let's differentiate:\n");
-		Differentiate(fout, &diffTree);
+		DifferentiateTree(fout, &diffTree);
 
 		fprintf(fout, "\\\\\\\\The result is:\n");
 		TreeToLatex(fout, &diffTree);

@@ -738,6 +738,7 @@ node_t* CreateNodeProp(node_t* parent, node_type type, value_t value, node_t* le
 
 	node->parent = parent;
 	CopyValue_t(node->value, value);
+	node->diff = 0;
 	node->type = type;
 	node->left = left;
 	node->right = right;
