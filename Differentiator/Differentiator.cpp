@@ -549,15 +549,16 @@ int DifferentiateNode(node_t*& curNode) {
 	int differentiated = curNode->diff;
 
 	if (differentiated) {
+		node_t* curNodeBckp = curNode;
 		UpdateParentChild(curNode, newNode);
-		DeleteNodes(curNode);
+		DeleteNodes(curNodeBckp);
 		curNode = newNode;
 	}
 	else {
 		if (curNode->left != NULL) {
 			differentiated |= DifferentiateNode(curNode->left);
 		}
-		if (!differentiated && curNode->right!=NULL) {
+		if (!differentiated && curNode->right != NULL) {
 			differentiated |= DifferentiateNode(curNode->right);
 		}
 	}
@@ -570,14 +571,16 @@ void DifferentiateTree(FILE* fout, tree_t* exprTree) {
 	assert(fout != NULL);
 	assert(exprTree != NULL);
 
-	fprintf(fout, "\\begin{flalign*}\n");
+	DIFF(exprTree->root);
+
+	fprintf(fout, "\\begin{flalign*}\n&");
 	NodesToLatex(fout, exprTree->root);
 
-	DIFF(exprTree->root);
 	while (DifferentiateNode(exprTree->root)) {
-		fprintf(fout, " =\\\\\n= ");
+		fprintf(fout, " =\\\\\n&= ");
 		NodesToLatex(fout, exprTree->root);
 	}
+
 	fprintf(fout, " &&\n\\end{flalign*}\n");
 
 	RecalcTreeSize(exprTree);
@@ -898,7 +901,7 @@ void OpenExprPdf(const char* fName = "LatexFiles\\expression.pdf") {
 
 
 void PrintHelp() {
-	printf("Available functions:\n");
+	printf("\nAvailable functions:\n");
 
 #define DEF_FUNC(str)\
 	printf("%s\n", #str);
