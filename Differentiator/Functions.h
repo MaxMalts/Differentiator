@@ -338,4 +338,23 @@ DEF_FUNC(pow, 2, pow_funcI, {
 	NodesToLatex(fout, curNode->right);
 	fprintf(fout, "}");
 
-	}, {})
+	}, {
+
+	assert(curNode->right != NULL);
+	assert(curNode->left != NULL);
+
+	if (curNode->left->type == num_node && curNode->right->type == num_node) {
+		if (*((float*)curNode->left->value) == 1) {
+			newNode = NUM(curNode->parent, 1);
+			simplified = 1;
+		}
+	}
+	else if (curNode->right->type == num_node) {
+		if (*((float*)curNode->right->value) == 1) {
+			newNode = CLONE(curNode->left);
+			newNode->parent = curNode->parent;
+			simplified = 1;
+		}
+	}
+
+	})
