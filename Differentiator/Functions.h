@@ -10,7 +10,7 @@ DEF_FUNC(sin, 1, sin_funcI, {
 
 	STANDARD_FUNC_OUTPUT
 
-	})
+	}, {})
 
 DEF_FUNC(cos, 1, cos_funcI, {
 
@@ -26,7 +26,7 @@ DEF_FUNC(cos, 1, cos_funcI, {
 
 	STANDARD_FUNC_OUTPUT
 
-	})
+	}, {})
 
 DEF_FUNC(tg, 1, tg_funcI, {
 
@@ -44,7 +44,7 @@ DEF_FUNC(tg, 1, tg_funcI, {
 
 	STANDARD_FUNC_OUTPUT
 
-	})
+	}, {})
 
 DEF_FUNC(ctg, 1, ctg_funcI, {
 
@@ -62,7 +62,7 @@ DEF_FUNC(ctg, 1, ctg_funcI, {
 
 	STANDARD_FUNC_OUTPUT
 
-	})
+	}, {})
 
 DEF_FUNC(arcsin, 1, arcsin_funcI, {
 
@@ -81,7 +81,7 @@ DEF_FUNC(arcsin, 1, arcsin_funcI, {
 
 	STANDARD_FUNC_OUTPUT
 
-	})
+	}, {})
 
 DEF_FUNC(arccos, 1, arccos_funcI, {
 
@@ -118,7 +118,7 @@ DEF_FUNC(arctg, 1, arctg_funcI, {
 
 	STANDARD_FUNC_OUTPUT
 
-	})
+	}, {})
 
 DEF_FUNC(arcctg, 1, arcctg_funcI, {
 
@@ -136,7 +136,7 @@ DEF_FUNC(arcctg, 1, arcctg_funcI, {
 
 	STANDARD_FUNC_OUTPUT
 
-	})
+	}, {})
 
 DEF_FUNC(exp, 1, exp_funcI, {
 
@@ -155,7 +155,7 @@ DEF_FUNC(exp, 1, exp_funcI, {
 	NodesToLatex(fout, curNode->left);
 	fprintf(fout, "}");
 
-	})
+	}, {})
 
 DEF_FUNC(abs, 1, abs_funcI, {
 
@@ -174,6 +174,18 @@ DEF_FUNC(abs, 1, abs_funcI, {
 	fprintf(fout, "|");
 	NodesToLatex(fout, curNode->left);
 	fprintf(fout, "|");
+
+	}, {
+	
+	assert(curNode->right == NULL);
+	assert(curNode->left != NULL);
+
+	if (curNode->left->type == num_node) {
+		float num = *(float*)curNode->left->value;
+		num = fabs(num);
+		newNode = NUM(curNode->parent, num);
+		simplified = 1;
+	}
 
 	})
 
@@ -197,6 +209,18 @@ DEF_FUNC(floor, 1, floor_funcI, {
 	NodesToLatex(fout, curNode->left);
 	fprintf(fout, "]");
 
+	}, {
+
+	assert(curNode->right == NULL);
+	assert(curNode->left != NULL);
+
+	if (curNode->left->type == num_node) {
+		float num = *(float*)curNode->left->value;
+		num = floor(num);
+		newNode = NUM(curNode->parent, num);
+		simplified = 1;
+	}
+
 	})
 
 DEF_FUNC(sqrt, 1, sqrt_funcI, {
@@ -219,7 +243,7 @@ DEF_FUNC(sqrt, 1, sqrt_funcI, {
 	NodesToLatex(fout, curNode->left);
 	fprintf(fout, "}");
 
-	})
+	}, {})
 
 DEF_FUNC(ln, 1, ln_funcI, {
 
@@ -234,7 +258,7 @@ DEF_FUNC(ln, 1, ln_funcI, {
 
 	STANDARD_FUNC_OUTPUT
 
-	})
+	}, {})
 
 DEF_FUNC(lg, 1, lg_funcI, {
 
@@ -252,7 +276,7 @@ DEF_FUNC(lg, 1, lg_funcI, {
 
 	STANDARD_FUNC_OUTPUT
 
-	})
+	}, {})
 
 DEF_FUNC(log, 2, log_funcI, {
 
@@ -276,7 +300,7 @@ DEF_FUNC(log, 2, log_funcI, {
 	NodesToLatex(fout, curNode->right);
 	fprintf(fout, ")");
 
-	})
+	}, {})
 
 DEF_FUNC(pow, 2, pow_funcI, {
 
@@ -287,7 +311,7 @@ DEF_FUNC(pow, 2, pow_funcI, {
 		newNode = MUL(curNode->parent, NULL, DIFF(CLONE(curNode->left)));
 			newNode->left = MUL(newNode, CLONE(curNode->right), NULL);
 				newNode->left->right = POW(newNode->left, CLONE(curNode->left), NULL);
-					newNode->left->right->right = NUM(curNode->left->right, *((float*)curNode->right->value) - 1);
+					newNode->left->right->right = NUM(newNode->left->right, *((float*)curNode->right->value) - 1);
 	}
 	else if (curNode->left->type == num_node) {
 		newNode = MUL(curNode->parent, NULL, DIFF(CLONE(curNode->right)));
@@ -314,4 +338,4 @@ DEF_FUNC(pow, 2, pow_funcI, {
 	NodesToLatex(fout, curNode->right);
 	fprintf(fout, "}");
 
-	})
+	}, {})

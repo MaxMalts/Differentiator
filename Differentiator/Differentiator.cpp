@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <ctype.h>
+#include <math.h>
 #include "diff_tree.h"
 #include "buffer.h"
 #include "Functions_enum.h"
@@ -680,6 +681,21 @@ int SimplifyExprNodes(node_t*& curNode) {
 			}
 		}
 	}
+	else if (curNode->type == func_node) {
+#define DEF_FUNC(str, NParams, funcI, diffCode, outpCode, simplifCode) \
+		case funcI: {       \
+			simplifCode;    \
+			break;          \
+		}
+
+		switch (curNode->value[0]) {
+#include "functions.h"
+		default:
+			assert(0);
+		}
+
+#undef DEF_FUNC
+	}
 
 	if (simplified) {
 		node_t* curNodeBckp = curNode;
@@ -884,20 +900,6 @@ void OpenExprPdf(const char* fName = "LatexFiles\\expression.pdf") {
 	sprintf(sysComm, "start /WAIT cmd /k \"%s & exit\"", fName);
 	system(sysComm);
 }
-
-
-//int ShowExpr(tree_t* exprTree) {
-//	assert(exprTree != NULL);
-//
-//	if (TreeToLatex(exprTree) != 0) {
-//		return 1;
-//	}
-//	
-//	CompileLatex();
-//	OpenExprPdf();
-//
-//	return 0;
-//}
 
 
 void PrintHelp() {
