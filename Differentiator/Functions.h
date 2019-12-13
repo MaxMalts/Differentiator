@@ -283,11 +283,25 @@ DEF_FUNC(pow, 2, pow_funcI, {
 	assert(curNode->right != NULL);
 	assert(curNode->left != NULL);
 
-	node_t* expRepres = EXP(curNode->parent, NULL);
-		expRepres->left = MUL(expRepres, CLONE(curNode->right), NULL);
-			expRepres->left->right = LN(expRepres->left, CLONE(curNode->left));
+	if (curNode->right->type == num_node) {
+		newNode = MUL(curNode->parent, NULL, DIFF(CLONE(curNode->left)));
+			newNode->left = MUL(newNode, CLONE(curNode->right), NULL);
+				newNode->left->right = POW(newNode->left, CLONE(curNode->left), NULL);
+					newNode->left->right->right = NUM(curNode->left->right, *((float*)curNode->right->value) - 1);
+	}
+	else if (curNode->left->type == num_node) {
+		newNode = MUL(curNode->parent, NULL, DIFF(CLONE(curNode->right)));
+			newNode->left = MUL(newNode, NULL, NULL);
+				newNode->left->left = POW(newNode->left, CLONE(curNode->left), CLONE(curNode->right));
+				newNode->left->right = LN(newNode->left, CLONE(curNode->left));
+	}
+	else {
+		node_t* expRepres = EXP(curNode->parent, NULL);
+			expRepres->left = MUL(expRepres, CLONE(curNode->right), NULL);
+				expRepres->left->right = LN(expRepres->left, CLONE(curNode->left));
 
-	newNode = DIFF(expRepres);
+		newNode = DIFF(expRepres);
+	}
 
 	}, {
 

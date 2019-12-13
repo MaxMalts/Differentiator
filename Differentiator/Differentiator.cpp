@@ -943,6 +943,7 @@ int StartDifferentiator() {
 		FILE* fout = fopen(foutName, "w");
 		if (fout == NULL) {
 			perror("Latex output file open error");
+			getchar();
 			return 1;
 		}
 
