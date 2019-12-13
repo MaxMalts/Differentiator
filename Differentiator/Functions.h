@@ -332,9 +332,15 @@ DEF_FUNC(pow, 2, pow_funcI, {
 	assert(curNode->right != NULL);
 	assert(curNode->left != NULL);
 
-	fprintf(fout, "(", funcS);
-	NodesToLatex(fout, curNode->left);
-	fprintf(fout, ")^{");
+	if (curNode->left->type == num_node || curNode->left->type == var_node) {
+		NodesToLatex(fout, curNode->left);
+	}
+	else {
+		fprintf(fout, "(", funcS);
+		NodesToLatex(fout, curNode->left);
+		fprintf(fout, ")");
+	}
+	fprintf(fout, "^{");
 	NodesToLatex(fout, curNode->right);
 	fprintf(fout, "}");
 

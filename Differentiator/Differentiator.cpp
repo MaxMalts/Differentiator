@@ -789,18 +789,32 @@ int NodesToLatex(FILE* fout, node_t* curNode) {
 		switch (curNode->value[0]) {
 		case '+':
 		case '-': {
-			fprintf(fout, "(");
 			NodesToLatex(fout, curNode->left);
 			fprintf(fout, "%c", curNode->value[0]);
 			NodesToLatex(fout, curNode->right);
-			fprintf(fout, ")");
 			break;
 		}
 
 		case '*': {
-			NodesToLatex(fout, curNode->left);
+			if (curNode->left->type == op_node && (curNode->left->value[0] == '+' || curNode->left->value[0] == '-')) {
+				fprintf(fout, "(");
+				NodesToLatex(fout, curNode->left);
+				fprintf(fout, ")");
+			}
+			else {
+				NodesToLatex(fout, curNode->left);
+			}
+
 			fprintf(fout, "\\cdot ");
-			NodesToLatex(fout, curNode->right);
+
+			if (curNode->right->type == op_node && (curNode->right->value[0] == '+' || curNode->right->value[0] == '-')) {
+				fprintf(fout, "(");
+				NodesToLatex(fout, curNode->right);
+				fprintf(fout, ")");
+			}
+			else {
+				NodesToLatex(fout, curNode->right);
+			}
 			break;
 		}
 
