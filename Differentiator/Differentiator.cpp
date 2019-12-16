@@ -15,6 +15,31 @@ int NodesToLatex(FILE* fout, node_t* curNode);
 
 
 /**
+*	Читает заданное количество символов из входного потока со спецификатором формата
+*
+*	@param[out] buf Буфер
+*	@param[in] formSpec Спецификатор формата
+*	@param[in] NChars Количество символов. Внимание, в конце может дописаться еще один '\0'!
+*
+*	@return 1 - ошибка; 0 - все прошло нормально
+*/
+
+int ScanNChars(char* buf, const char* formSpec, const int NChars) {
+	assert(buf != NULL);
+	assert(NChars >= 0);
+
+	char format[100] = "";
+	sprintf(format, "%%%s%ds", formSpec, NChars);
+	int err = scanf(format, buf);
+	if (err != 1 && err != 0) {
+		return 1;
+	}
+	fseek(stdin, 0, SEEK_END);
+
+	return 0;
+}
+
+/**
 *	Знак числа
 *
 *	@param[in] var
@@ -574,15 +599,15 @@ void DifferentiateTree(FILE* fout, tree_t* exprTree) {
 
 	DIFF(exprTree->root);
 
-	fprintf(fout, "\\begin{flalign*}\n&");
+	fprintf(fout, "\\begin{math}\n$$ ");
 	NodesToLatex(fout, exprTree->root);
 
 	while (DifferentiateNode(exprTree->root)) {
-		fprintf(fout, " =\\\\\n&= ");
+		fprintf(fout, " =\\\\\n$$ = ");
 		NodesToLatex(fout, exprTree->root);
 	}
 
-	fprintf(fout, " &&\n\\end{flalign*}\n");
+	fprintf(fout, "\n\\end{math}\n");
 
 	RecalcTreeSize(exprTree);
 
@@ -633,11 +658,11 @@ int SimplifyExprNodes(node_t*& curNode) {
 		else {
 			switch (curNode->value[0]) {
 			case '+': {
-				if (*(float*)curNode->left->value == 0) {
+				if (curNode->left->type == num_node && *(float*)curNode->left->value == 0) {
 					newNode = CLONE(curNode->right);
 					simplified = 1;
 				}
-				else if (*(float*)curNode->right->value == 0) {
+				else if (curNode->right->type == num_node && *(float*)curNode->right->value == 0) {
 					newNode = CLONE(curNode->left);
 					simplified = 1;
 				}
@@ -645,11 +670,11 @@ int SimplifyExprNodes(node_t*& curNode) {
 			}
 
 			case '-': {
-				if (*(float*)curNode->right->value == 0) {
+				if (curNode->left->type == num_node && *(float*)curNode->right->value == 0) {
 					newNode = CLONE(curNode->left);
 					simplified = 1;
 				}
-				else if (*(float*)curNode->left->value == 0) {
+				else if (curNode->right->type == num_node && *(float*)curNode->left->value == 0) {
 					newNode = MUL(curNode->parent, NULL, CLONE(curNode->right));
 					newNode->left = NUM(newNode, -1);
 					simplified = 1;
@@ -658,12 +683,20 @@ int SimplifyExprNodes(node_t*& curNode) {
 			}
 
 			case '*': {
-				if (*(float*)curNode->left->value == 1) {
+				if (curNode->left->type == num_node && *(float*)curNode->left->value == 1) {
 					newNode = CLONE(curNode->right);
 					simplified = 1;
 				}
-				else if (*(float*)curNode->right->value == 1) {
+				else if (curNode->right->type == num_node && *(float*)curNode->right->value == 1) {
 					newNode = CLONE(curNode->left);
+					simplified = 1;
+				}
+				else if (curNode->left->type == num_node && *(float*)curNode->left->value == 0) {
+					newNode = NUM(curNode->parent, 0);
+					simplified = 1;
+				}
+				else if (curNode->right->type == num_node && *(float*)curNode->right->value == 0) {
+					newNode = NUM(curNode->parent, 0);
 					simplified = 1;
 				}
 				break;
@@ -748,7 +781,7 @@ void LatexStructBeg(FILE* fout) {
 	assert(fout != NULL);
 
 	fprintf(fout, "\\documentclass{article}\n\\pagestyle{empty}\n\n");
-	fprintf(fout, "\\usepackage[margin=10px]{geometry}\n\\usepackage{mathtools}\n\n");
+	fprintf(fout, "\\usepackage[margin=10px]{geometry}\n\n");
 	fprintf(fout, "\\begin{document}\n");
 }
 
@@ -869,11 +902,11 @@ int TreeToLatex(FILE* fout, tree_t* exprTree) {
 	}
 #endif
 	
-	fprintf(fout, "\\begin{flalign*}\n");
+	fprintf(fout, "\\begin{math}\n$$ ");
 
 	NodesToLatex(fout, exprTree->root);
 
-	fprintf(fout, " &&\n\\end{flalign*}\n");
+	fprintf(fout, "\n\\end{math}\n");
 
 	return 0;
 }
@@ -1008,10 +1041,10 @@ int CalcExprValueRec(node_t*& curNode) {
 	}
 
 	if (curNode->left != NULL) {
-		calced |= SimplifyExprNodes(curNode->left);
+		calced |= CalcExprValueRec(curNode->left);
 	}
 	if (curNode->right != NULL) {
-		calced |= SimplifyExprNodes(curNode->right);
+		calced |= CalcExprValueRec(curNode->right);
 	}
 
 	return calced;
@@ -1053,32 +1086,62 @@ float CalcValInPoint(tree_t* exprTree, float point) {
 	return res;
 }
 
+enum mode_t {
+	undef_mode,
+	diff_mode,
+	diffp_mode
+};
+
+mode_t DetMode(char* buf) {
+	assert(buf != NULL);
+
+	if (strcmp(buf, "diff") == 0) {
+		return diff_mode;
+	}
+	if (strcmp(buf, "diffp") == 0) {
+		return diffp_mode;
+	}
+
+	return undef_mode;
+}
 
 int StartDifferentiator() {
 	const char foutName[] = "LatexFiles\\expression.tex";
 
-	printf("Hello, I can differentiate almost every function.\n");
+	printf("Hello, I can differentiate or calculate in a point almost every function.\n");
 
 	char expr[1000] = "";
 	while (1) {
 
-		printf("\nType in your function. If you need help type \"help\". For exit type \"exit\":\n");
+		printf("\nWhat do you want to do?\nType \"diff\" to differentiate function;\n"
+			   "\"diffp\" to calculate the differentiated function in specified point;\n");
+		char modeS[100] = "";
+		ScanNChars(modeS, "[^\n]", sizeof(modeS) - 1);
+		mode_t mode = DetMode(modeS);
+		while (mode == undef_mode) {
+			printf("Wrong mode. Retry:\n", sizeof(expr) - 1);
+			ScanNChars(modeS, "[^\n]", sizeof(modeS) - 1);
+			mode = DetMode(modeS);
+		}
 
-		scanf("%s[^\n]", expr);
-		fseek(stdin, 0, SEEK_END);
+		printf("\nType in your function. If you need help type \"help\":\n");
+		ScanNChars(expr, "[^\n]", sizeof(expr) - 1);
+		while (expr[sizeof(expr) - 2] != '\0') {
+			printf("Function too long (maximum function size is %d characters. "
+				   "Type in another function:\n", sizeof(expr) - 1);
+			memset(expr, 0, sizeof(expr));
+			ScanNChars(expr, "[^\n]", sizeof(expr) - 1);
+		}
 
 		if (strcmp(expr, "help") == 0) {
 			PrintHelp();
 			continue;
 		}
-		if (strcmp(expr, "exit") == 0) {
-			break;
-		}
 
 		int syntaxErr = 0;
 		tree_t diffTree = ExprToTree(expr, &syntaxErr);
 		if (syntaxErr) {
-			printf("Syntax error. Check the expression correctness.\n");
+			printf("Syntax error. Check the expression correctness.\n\n");
 			continue;
 		}
 
@@ -1089,24 +1152,41 @@ int StartDifferentiator() {
 			return 1;
 		}
 
+		printf("How many times to you want to differentiate?:\n");
+		int diffTimes = 0;
+		scanf("%d%*c", &diffTimes);
+
 		LatexStructBeg(fout);
-		fprintf(fout, "You entered:\n");
+		fprintf(fout, "You entered:\\\\\n");
 		TreeToLatex(fout, &diffTree);
 
 		SimplifyExprTree(&diffTree);
-		fprintf(fout, "\\\\After simplification:\n");
+		fprintf(fout, "\\\\\\\\After simplification:\\\\\n");
 		TreeToLatex(fout, &diffTree);
 
-		fprintf(fout, "\\\\\\\\Let's differentiate:\n");
-		DifferentiateTree(fout, &diffTree);
+		fprintf(fout, "\\\\\\\\\\\\Let's differentiate:\n");
+		for (int i = 0; i < diffTimes; i++) {
+			fprintf(fout, "\\\\\\\\Derivative %d:\\\\\n", i + 1);
+			DifferentiateTree(fout, &diffTree);
 
-		fprintf(fout, "\\\\\\\\The result is:\n");
+			SimplifyExprTree(&diffTree);
+			fprintf(fout, "\\\\After simplification:\\\\\n");
+			TreeToLatex(fout, &diffTree);
+		}
+
+		fprintf(fout, "\\\\\\\\\\\\The result is:\\\\\n");
 		TreeToLatex(fout, &diffTree);
 
-		SimplifyExprTree(&diffTree);
-		fprintf(fout, "\\\\Final result after simplification:\n");
-		TreeToLatex(fout, &diffTree);
-		
+		if (mode == diffp_mode) {
+			printf("In which pont do you want to calculate?\n");
+			float point = 0;
+			scanf("%f%*c", &point);
+
+			fprintf(fout, "\\\\\\\\In point %g the function is:\\\\\n", point);
+			CalcValInPoint(&diffTree, point);
+			TreeToLatex(fout, &diffTree);
+		}
+
 		LatexStructEnd(fout);
 		fclose(fout);
 
