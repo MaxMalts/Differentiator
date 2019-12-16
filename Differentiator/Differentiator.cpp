@@ -928,6 +928,132 @@ void PrintHelp() {
 }
 
 
+void ReplaceVars(node_t* curNode, float point) {
+	assert(curNode != NULL);
+
+	if (curNode->type == var_node) {
+		curNode->type = num_node;
+		memcpy(curNode->value, &point, sizeof(float));
+		return;
+	}
+	
+	if (curNode->left != NULL) {
+		ReplaceVars(curNode->left, point);
+	}
+	if (curNode->right != NULL) {
+		ReplaceVars(curNode->right, point);
+	}
+}
+
+
+int CalcExprValueRec(node_t*& curNode) {
+	assert(curNode != NULL);
+
+	node_t* newNode = NULL;
+	int calced = 0;
+
+	switch (curNode->type) {
+	case op_node: {
+		if (curNode->left->type == num_node && curNode->right->type == num_node) {
+			float val1 = *(float*)curNode->left->value;
+			float val2 = *(float*)curNode->right->value;
+
+			switch (curNode->value[0]) {
+			case '+':
+				newNode = NUM(curNode->parent, val1 + val2);
+				calced = 1;
+				break;
+			case '-':
+				newNode = NUM(curNode->parent, val1 - val2);
+				calced = 1;
+				break;
+			case '*':
+				newNode = NUM(curNode->parent, val1 * val2);
+				calced = 1;
+				break;
+			case '/':
+				newNode = NUM(curNode->parent, val1 / val2);
+				calced = 1;
+				break;
+			default:
+				assert(0);
+			}
+		}
+		break;
+	}
+
+	case func_node: {
+
+#define DEF_FUNC(str, NParams, funcI, diffCode, outpCode, simplCode, calcCode)\
+	case funcI: {                        \
+		calcCode;                        \
+		break;                           \
+	}
+
+		switch (curNode->value[0]) {
+#include "functions.h"
+		}
+#undef DEF_FUNC
+
+		break;
+	}
+	}
+
+	if (calced) {
+		node_t* curNodeBckp = curNode;
+		newNode->parent = curNode->parent;
+		UpdateParentChild(curNode, newNode);
+		DeleteNodes(curNodeBckp);
+		curNode = newNode;
+	}
+
+	if (curNode->left != NULL) {
+		calced |= SimplifyExprNodes(curNode->left);
+	}
+	if (curNode->right != NULL) {
+		calced |= SimplifyExprNodes(curNode->right);
+	}
+
+	return calced;
+}
+
+float CalcExprValue(tree_t* exprTree) {
+	assert(exprTree != NULL);
+
+#ifdef _DEBUG
+	if (!TreeOk(exprTree)) {
+		PrintTree_NOK(*exprTree);
+		return 0;
+	}
+#endif
+
+	while (CalcExprValueRec(exprTree->root)) {}
+
+	RecalcTreeSize(exprTree);
+	assert(exprTree->size == 1);
+
+	float res = *(float*)&exprTree->root->value;
+	return res;
+}
+
+float CalcValInPoint(tree_t* exprTree, float point) {
+	assert(exprTree != NULL);
+
+#ifdef _DEBUG
+	if (!TreeOk(exprTree)) {
+		PrintTree_NOK(*exprTree);
+		return 0;
+	}
+#endif
+
+	ReplaceVars(exprTree->root, point);
+
+	float res = CalcExprValue(exprTree);
+
+	return res;
+}
+
+
 int StartDifferentiator() {
 	const char foutName[] = "LatexFiles\\expression.tex";
 
