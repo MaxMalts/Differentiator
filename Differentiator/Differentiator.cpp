@@ -608,15 +608,19 @@ void DifferentiateTree(tree_t* exprTree, FILE* fout = NULL) {
 
 	DIFF(exprTree->root);
 
-	if (fout != NULL) fprintf(fout, "\\begin{math}\n$$ ");
-	NodesToLatex(fout, exprTree->root);
-
-	while (DifferentiateNode(exprTree->root)) {
-		if (fout != NULL) fprintf(fout, " =\\\\\n$$ = ");
+	if (fout != NULL) {
+		fprintf(fout, "\\begin{math}\n$$ ");
 		NodesToLatex(fout, exprTree->root);
 	}
 
-	if (fout != NULL) (fout, "\n\\end{math}\n");
+	while (DifferentiateNode(exprTree->root)) {
+		if (fout != NULL) {
+			fprintf(fout, " =\\\\\n$$ = ");
+			NodesToLatex(fout, exprTree->root);
+		}
+	}
+
+	if (fout != NULL) fprintf(fout, "\n\\end{math}\n");
 
 	RecalcTreeSize(exprTree);
 
@@ -1099,6 +1103,13 @@ tree_t Taylor(tree_t* exprTree, float point, int accur) {
 	assert(exprTree != NULL);
 	assert(accur > 0);
 	
+#ifdef _DEBUG
+	if (!TreeOk(exprTree)) {
+		PrintTree_NOK(*exprTree);
+		return {};
+	}
+#endif
+
 	tree_t calcDiffTree = TreeConstructor("calcDiffTree");
 	free(calcDiffTree.root);
 	tree_t taylorTree = TreeConstructor("taylorTree");
@@ -1130,13 +1141,28 @@ tree_t Taylor(tree_t* exprTree, float point, int accur) {
 		curVal = curVal / Fact(i);
 
 		taylorTree.root = PLUS(NULL, taylorTree.root, NULL);
-			taylorTree.root->right = POW(taylorTree.root, NULL, NULL);
-				taylorTree.root->right->left = MINUS(taylorTree.root->right, NULL, NULL);
-					taylorTree.root->right->left->left = VAR(taylorTree.root->right->left, 'x');
-					taylorTree.root->right->left->right = NUM(taylorTree.root->right->left, point);
-				taylorTree.root->right->right = NUM(taylorTree.root->right, curVal);
+			taylorTree.root->right = MUL(taylorTree.root, NULL, NULL);
+				taylorTree.root->right->left = NUM(taylorTree.root->right, curVal);
+				taylorTree.root->right->right = POW(taylorTree.root->right, NULL, NULL);
+					taylorTree.root->right->right->left = MINUS(taylorTree.root->right->right, NULL, NULL);
+						taylorTree.root->right->right->left->left = VAR(taylorTree.root->right->right->left, 'x');
+						taylorTree.root->right->right->left->right = NUM(taylorTree.root->right->right->left, point);
+					taylorTree.root->right->right->right = NUM(taylorTree.root->right->right, (float)i);
 
 	}
+	RecalcTreeSize(&taylorTree);
+	SimplifyExprTree(&taylorTree);
+
+	DeleteTree(&curDiffTree);
+
+#ifdef _DEBUG
+	if (TreeOk(&taylorTree)) {
+		PrintTree_OK(taylorTree);
+	}
+	else {
+		PrintTree_NOK(taylorTree);
+	}
+#endif
 
 	return taylorTree;
 }
@@ -1144,7 +1170,8 @@ tree_t Taylor(tree_t* exprTree, float point, int accur) {
 enum mode_t {
 	undef_mode,
 	diff_mode,
-	diffp_mode
+	diffp_mode,
+	taylor_mode
 };
 
 mode_t DetMode(char* buf) {
@@ -1156,7 +1183,9 @@ mode_t DetMode(char* buf) {
 	if (strcmp(buf, "diffp") == 0) {
 		return diffp_mode;
 	}
-
+	if (strcmp(buf, "taylor") == 0) {
+		return taylor_mode;
+	}
 	return undef_mode;
 }
 
@@ -1169,7 +1198,8 @@ int StartDifferentiator() {
 	while (1) {
 
 		printf("\nWhat do you want to do?\nType \"diff\" to differentiate function;\n"
-			   "\"diffp\" to calculate the differentiated function in specified point;\n");
+			   "\"diffp\" to calculate the differentiated function in specified point;\n"
+			   "\"taylor\" to get the taylor formula in specified point\n");
 		char modeS[100] = "";
 		ScanNChars(modeS, "[^\n]", sizeof(modeS) - 1);
 		mode_t mode = DetMode(modeS);
@@ -1207,43 +1237,94 @@ int StartDifferentiator() {
 			return 1;
 		}
 
-		printf("How many times to you want to differentiate?:\n");
-		int diffTimes = 0;
-		scanf("%d%*c", &diffTimes);
+		switch (mode) {
+		case diff_mode:
+		case diffp_mode: {
+			printf("How many times to you want to differentiate?:\n");
+			int diffTimes = 0;
+			scanf("%d%*c", &diffTimes);
 
-		LatexStructBeg(fout);
-		fprintf(fout, "You entered:\\\\\n");
-		TreeToLatex(fout, &diffTree);
-
-		SimplifyExprTree(&diffTree);
-		fprintf(fout, "\\\\\\\\After simplification:\\\\\n");
-		TreeToLatex(fout, &diffTree);
-
-		fprintf(fout, "\\\\\\\\\\\\Let's differentiate:\n");
-		for (int i = 0; i < diffTimes; i++) {
-			fprintf(fout, "\\\\\\\\Derivative %d:\\\\\n", i + 1);
-			DifferentiateTree(&diffTree, fout);
+			LatexStructBeg(fout);
+			fprintf(fout, "You entered:\\\\\n");
+			TreeToLatex(fout, &diffTree);
 
 			SimplifyExprTree(&diffTree);
-			fprintf(fout, "\\\\After simplification:\\\\\n");
+			fprintf(fout, "\\\\\\\\After simplification:\\\\\n");
 			TreeToLatex(fout, &diffTree);
+
+			fprintf(fout, "\\\\\\\\\\\\Let's differentiate:\n");
+			for (int i = 0; i < diffTimes; i++) {
+				fprintf(fout, "\\\\\\\\Derivative %d:\\\\\n", i + 1);
+				DifferentiateTree(&diffTree, fout);
+
+				SimplifyExprTree(&diffTree);
+				fprintf(fout, "\\\\After simplification:\\\\\n");
+				TreeToLatex(fout, &diffTree);
+			}
+
+			fprintf(fout, "\\\\\\\\\\\\The result is:\\\\\n");
+			TreeToLatex(fout, &diffTree);
+
+			if (mode == diffp_mode) {
+				printf("In which pont do you want to calculate?\n");
+				float point = 0;
+				scanf("%f%*c", &point);
+
+				fprintf(fout, "\\\\\\\\In point %g the function is:\\\\\n", point);
+				CalcValInPoint(&diffTree, point);
+				TreeToLatex(fout, &diffTree);
+			}
+
+			LatexStructEnd(fout);
+			fclose(fout);
+
+			break;
 		}
 
-		fprintf(fout, "\\\\\\\\\\\\The result is:\\\\\n");
-		TreeToLatex(fout, &diffTree);
+		case taylor_mode: {
+			printf("Till which accuracy do you wand to get the formula?:\n");
+			int accur = 0;
+			scanf("%d%*c", &accur);
 
-		if (mode == diffp_mode) {
-			printf("In which pont do you want to calculate?\n");
+			tree_t backupTree = TreeConstructor("backupTree");
+			free(backupTree.root);
+			backupTree.root = CloneNodes(diffTree.root);
+			backupTree.size = diffTree.size;
+
+			LatexStructBeg(fout);
+			fprintf(fout, "You entered:\\\\\n");
+			TreeToLatex(fout, &diffTree);
+
+			SimplifyExprTree(&diffTree);
+			fprintf(fout, "\\\\\\\\After simplification:\\\\\n");
+			TreeToLatex(fout, &diffTree);
+
+			fprintf(fout, "\\\\\\\\\\\\Let's differentiate:\n");
+			for (int i = 0; i < accur; i++) {
+				fprintf(fout, "\\\\\\\\Derivative %d:\\\\\n", i + 1);
+				DifferentiateTree(&diffTree, fout);
+
+				SimplifyExprTree(&diffTree);
+				fprintf(fout, "\\\\After simplification:\\\\\n");
+				TreeToLatex(fout, &diffTree);
+			}
+
+			printf("In which point do you want to get the formula?\n");
 			float point = 0;
 			scanf("%f%*c", &point);
 
-			fprintf(fout, "\\\\\\\\In point %g the function is:\\\\\n", point);
-			CalcValInPoint(&diffTree, point);
-			TreeToLatex(fout, &diffTree);
-		}
+			fprintf(fout, "\\\\\\\\In point %g the Taylor formula is:\\\\\n", point);
+			tree_t taylorTree = Taylor(&backupTree, point, accur);
+			fprintf(fout, "\\begin{math}\n");
+			NodesToLatex(fout, taylorTree.root);
+			fprintf(fout, " + o(x^{%d})\n\\end{math}", accur);
 
-		LatexStructEnd(fout);
-		fclose(fout);
+			LatexStructEnd(fout);
+			fclose(fout);
+
+			break;
+		}
+		}
 
 		CompileLatex();
 		OpenExprPdf();
