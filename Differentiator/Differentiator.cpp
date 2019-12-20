@@ -14,6 +14,16 @@ int DifferentiateNode(node_t*& curNode);
 int NodesToLatex(FILE* fout, node_t* curNode);
 
 
+int Fact(int val) {
+	assert(val >= 0);
+
+	if (val == 0) {
+		return 1;
+	}
+
+	return val * Fact(val - 1);
+}
+
 /**
 *	Читает заданное количество символов из входного потока со спецификатором формата
 *
@@ -593,21 +603,20 @@ int DifferentiateNode(node_t*& curNode) {
 }
 
 
-void DifferentiateTree(FILE* fout, tree_t* exprTree) {
-	assert(fout != NULL);
+void DifferentiateTree(tree_t* exprTree, FILE* fout = NULL) {
 	assert(exprTree != NULL);
 
 	DIFF(exprTree->root);
 
-	fprintf(fout, "\\begin{math}\n$$ ");
+	if (fout != NULL) fprintf(fout, "\\begin{math}\n$$ ");
 	NodesToLatex(fout, exprTree->root);
 
 	while (DifferentiateNode(exprTree->root)) {
-		fprintf(fout, " =\\\\\n$$ = ");
+		if (fout != NULL) fprintf(fout, " =\\\\\n$$ = ");
 		NodesToLatex(fout, exprTree->root);
 	}
 
-	fprintf(fout, "\n\\end{math}\n");
+	if (fout != NULL) (fout, "\n\\end{math}\n");
 
 	RecalcTreeSize(exprTree);
 
@@ -1086,6 +1095,52 @@ float CalcValInPoint(tree_t* exprTree, float point) {
 	return res;
 }
 
+tree_t Taylor(tree_t* exprTree, float point, int accur) {
+	assert(exprTree != NULL);
+	assert(accur > 0);
+	
+	tree_t calcDiffTree = TreeConstructor("calcDiffTree");
+	free(calcDiffTree.root);
+	tree_t taylorTree = TreeConstructor("taylorTree");
+	free(taylorTree.root);
+
+	tree_t curDiffTree = TreeConstructor("curDiffTree");
+	free(curDiffTree.root);
+	curDiffTree.root = CloneNodes(exprTree->root);
+	curDiffTree.size = exprTree->size;
+
+	calcDiffTree.root = CloneNodes(curDiffTree.root);
+	calcDiffTree.size = curDiffTree.size;
+	CalcValInPoint(&calcDiffTree, point);
+
+	float curVal = *(float*)calcDiffTree.root->value;
+	free(calcDiffTree.root);
+
+	taylorTree.root = NUM(NULL, curVal);
+
+	for (int i = 1; i <= accur; i++) {
+		DifferentiateTree(&curDiffTree);
+		calcDiffTree.root = CloneNodes(curDiffTree.root);
+		calcDiffTree.size = curDiffTree.size;
+		CalcValInPoint(&calcDiffTree, point);
+
+		float curVal = *(float*)calcDiffTree.root->value;
+		free(calcDiffTree.root);
+
+		curVal = curVal / Fact(i);
+
+		taylorTree.root = PLUS(NULL, taylorTree.root, NULL);
+			taylorTree.root->right = POW(taylorTree.root, NULL, NULL);
+				taylorTree.root->right->left = MINUS(taylorTree.root->right, NULL, NULL);
+					taylorTree.root->right->left->left = VAR(taylorTree.root->right->left, 'x');
+					taylorTree.root->right->left->right = NUM(taylorTree.root->right->left, point);
+				taylorTree.root->right->right = NUM(taylorTree.root->right, curVal);
+
+	}
+
+	return taylorTree;
+}
+
 enum mode_t {
 	undef_mode,
 	diff_mode,
@@ -1167,7 +1222,7 @@ int StartDifferentiator() {
 		fprintf(fout, "\\\\\\\\\\\\Let's differentiate:\n");
 		for (int i = 0; i < diffTimes; i++) {
 			fprintf(fout, "\\\\\\\\Derivative %d:\\\\\n", i + 1);
-			DifferentiateTree(fout, &diffTree);
+			DifferentiateTree(&diffTree, fout);
 
 			SimplifyExprTree(&diffTree);
 			fprintf(fout, "\\\\After simplification:\\\\\n");

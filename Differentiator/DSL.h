@@ -61,6 +61,9 @@ value_t* CharToValue_t(char ch) {
 #define CLONE(node)\
 	CloneNodes(node)
 
+#define VAR(parent, var)\
+	CreateNodeProp(parent, var_node, *CharToValue_t(var), NULL, NULL)
+
 #define NUM(parent, num)\
 	CreateNodeProp(parent, num_node, *FloatToValue_t(num), NULL, NULL)
 
