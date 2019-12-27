@@ -246,16 +246,15 @@ node_t* GetP(int* syntaxErr) {
 		curSequence++;
 	}
 
-	else if (isalpha(*curSequence)) {
-		if (isalpha(*(curSequence + 1))) {
-			res = GetFunc(syntaxErr);
-			assert_syntax(*syntaxErr);
-		}
-		else {
-			res = GetId(syntaxErr);
-			assert_syntax(*syntaxErr);
-		}
+	else if (isalpha(*curSequence) && isalpha(*(curSequence + 1))) {
+		res = GetFunc(syntaxErr);
+		assert_syntax(*syntaxErr);
 	}
+	else if (isalpha(*curSequence) || (*curSequence == '-' && isalpha(*(curSequence + 1)))) {
+		res = GetId(syntaxErr);
+		assert_syntax(*syntaxErr);
+	}
+
 
 	else {
 		res = GetFNode(syntaxErr);
@@ -343,17 +342,31 @@ node_t* GetFunc(int* syntaxErr) {
 node_t* GetId(int* syntaxErr) {
 	assert(syntaxErr != NULL);
 
-	if (!isalpha(*curSequence)) {
-		*syntaxErr = 1;
+	node_t* res = NULL;
+
+	if (*curSequence == '-') {
+		curSequence++;
+		if (!isalpha(*curSequence)) {
+			*syntaxErr = 1;
+		}
+		assert_syntax(*syntaxErr);
+
+		res = MUL(NULL, NULL, NULL);
+			res->left = NUM(res, -1);
+			res->right = VAR(res, *curSequence);
+
+		curSequence++;
 	}
-	assert_syntax(*syntaxErr);
+	else {
+		if (!isalpha(*curSequence)) {
+			*syntaxErr = 1;
+		}
+		assert_syntax(*syntaxErr);
 
-	node_t* res = CreateNode();
-	res->type = var_node;
-	res->value[0] = *curSequence;
-	res->value[1] = '\0';
+		res = VAR(NULL, *curSequence);
 
-	curSequence++;
+		curSequence++;
+	}
 
 	return res;
 }
@@ -833,11 +846,25 @@ int NodesToLatex(FILE* fout, node_t* curNode) {
 		assert(NodeChildsCount(curNode) == 2);
 
 		switch (curNode->value[0]) {
-		case '+':
-		case '-': {
+		case '+': {
 			NodesToLatex(fout, curNode->left);
 			fprintf(fout, "%c", curNode->value[0]);
 			NodesToLatex(fout, curNode->right);
+			break;
+		}
+		case '-': {
+			NodesToLatex(fout, curNode->left);
+			fprintf(fout, "%c", curNode->value[0]);
+
+			if (curNode->right->type == op_node && (curNode->right->value[0] == '+' || curNode->right->value[0] == '-')) {
+				fprintf(fout, "(");
+				NodesToLatex(fout, curNode->right);
+				fprintf(fout, ")");
+			}
+			else {
+				NodesToLatex(fout, curNode->right);
+			}
+
 			break;
 		}
 
