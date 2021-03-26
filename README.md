@@ -26,6 +26,6 @@ pow
 
 The program will generate a pdf file and will show it to you. It will contain your input, the step-by-step differentiation and the final answer.
 
-# Installation
+## Installation
 
 You can download the program from [Releases](https://github.com/MaxMalts/Differentiator/releases) section. You also need to install [TeXworks](http://www.tug.org/texworks/#Getting_TeXworks) for the program to work properly.
